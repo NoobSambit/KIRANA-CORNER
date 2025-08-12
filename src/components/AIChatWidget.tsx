@@ -5,6 +5,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useCart } from './CartContext';
 
+const API_BASE = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/$/, '');
+const apiUrl = (path: string) => `${API_BASE}${path}`;
+
 type ChatRole = 'user' | 'assistant' | 'system';
 
 interface ChatMessage {
@@ -148,7 +151,7 @@ const AIChatWidget: React.FC = () => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       const clientToken = import.meta.env?.VITE_AI_API_TOKEN;
       if (clientToken) headers['x-ai-token'] = String(clientToken);
-      const res = await fetch('/api/ai/recipe', {
+      const res = await fetch(apiUrl('/api/ai/recipe'), {
         method: 'POST',
         headers,
         body: JSON.stringify({ query: text })
@@ -160,10 +163,9 @@ const AIChatWidget: React.FC = () => {
       }
       const data = (await res.json()) as { markdown: string; recipe?: RecipeResponsePayload };
       let payload = data.recipe;
-      // server returned only ingredients, fetch stock match
       if (payload && payload.ingredients && (!payload.inStock || payload.inStock.length === 0)) {
         try {
-          const res2 = await fetch('/api/ai/stock-match', { method: 'POST', headers, body: JSON.stringify({ ingredients: payload.ingredients }) });
+          const res2 = await fetch(apiUrl('/api/ai/stock-match'), { method: 'POST', headers, body: JSON.stringify({ ingredients: payload.ingredients }) });
           if (res2.ok) {
             const j = await res2.json();
             payload = { ...payload, inStock: j.inStock || [], missing: j.missing || [] } as RecipeResponsePayload;
@@ -193,7 +195,7 @@ const AIChatWidget: React.FC = () => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       const clientToken = import.meta.env?.VITE_AI_API_TOKEN;
       if (clientToken) headers['x-ai-token'] = String(clientToken);
-      const res = await fetch('/api/ai/vision', { method: 'POST', headers, body: JSON.stringify({ dataUrl: base64 }) });
+      const res = await fetch(apiUrl('/api/ai/vision'), { method: 'POST', headers, body: JSON.stringify({ dataUrl: base64 }) });
       if (!res.ok) throw new Error('Vision error');
       const data = (await res.json()) as { markdown: string; recipe?: RecipeResponsePayload };
       append({ id: crypto.randomUUID(), role: 'assistant', content: data.markdown, data: data.recipe });
