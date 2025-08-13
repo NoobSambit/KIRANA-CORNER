@@ -14,19 +14,9 @@ interface RecipeData {
 // Vercel serverless function handler
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Enable CORS for cross-origin requests
-  const allowedOrigins = [
-    'https://kirana-corner.vercel.app',
-    'https://kirana-corner-bdn600id9-sambit-pradhans-projects-c8722516.vercel.app',
-    'http://localhost:3000',
-    'http://localhost:5173'
-  ];
-  
-  const origin = req.headers.origin;
-  if (origin && allowedOrigins.includes(origin)) {
-    res.setHeader('Access-Control-Allow-Origin', origin);
-  } else {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-  }
+  // CORS: reflect the request origin when present, otherwise allow all
+  const origin = (req.headers.origin as string | undefined) || '*';
+  res.setHeader('Access-Control-Allow-Origin', origin);
   
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, x-ai-token, X-AI-Token, Authorization');
@@ -36,6 +26,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') {
     res.status(200).end();
     return;
+  }
+
+  // Temporary: allow GET to verify function routing from the browser
+  if (req.method === 'GET') {
+    return res.status(200).json({ ok: true, note: 'GET ok - function reachable', runtime: 'node', model: MODEL_NAME });
   }
 
   if (req.method !== 'POST') {
@@ -55,7 +50,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'AI service configuration error' });
     }
 
-    const { query } = req.body as { query?: string };
+    // Vercel parses JSON body for us when Content-Type is application/json
+    const { query } = (req.body ?? {}) as { query?: string };
     if (!query) {
       return res.status(400).json({ error: 'Missing query parameter in request body' });
     }
