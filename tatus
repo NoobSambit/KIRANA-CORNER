@@ -1,0 +1,4 @@
+[33me3f94db[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m)[m fix: resolve Vercel deployment MIME type errors and blank page issues
+[33m044d506[m fix: correct vercel.json build source from vite.config.ts to package.json
+[33m047fab1[m refactor: move Firebase config to environment variables for Vercel deployment
+[33mf382463[m Initial commit: KIRANA-CORNER - Complete e-commerce platform with AI features, stock matching, cart integration, and Cloudinary image integration

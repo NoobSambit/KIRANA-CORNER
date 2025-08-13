@@ -64,15 +64,26 @@ const CustomerDashboard: React.FC = () => {
   const Banner: React.FC<{ name: string; alt: string; onClick: () => void }> = ({ name, alt, onClick }) => {
     const [srcIdx, setSrcIdx] = useState(0);
     const sources = useMemo(
-      () => [
-        `/customerdashboard/${name}.jpg`,
-        `/customerdashboard/${name}.png`,
-        `/dashboard/${name}.jpg`,
-        `/dashboard/${name}.png`,
-        `/banners/${name}.jpg`,
-        `/banners/${name}.png`,
-        `/landing/hero-main.png`, // final fallback/placeholder
-      ],
+      () => {
+        // Map category names to Cloudinary URLs
+        const cloudinaryUrls: Record<string, string> = {
+          'kirana': 'https://res.cloudinary.com/dacgtjw7w/image/upload/v1754972951/kirana_bbkfdw.jpg',
+          'household': 'https://res.cloudinary.com/dacgtjw7w/image/upload/v1754972965/household_t8qh0f.png',
+          'electronics': 'https://res.cloudinary.com/dacgtjw7w/image/upload/v1754972963/electronics_bi9cxq.png',
+          'snack': 'https://res.cloudinary.com/dacgtjw7w/image/upload/v1754972958/snack_2_ohbjrl.png'
+        };
+        
+        // Return Cloudinary URL if available, otherwise fallback to local paths
+        return cloudinaryUrls[name] ? [cloudinaryUrls[name]] : [
+          `/customerdashboard/${name}.jpg`,
+          `/customerdashboard/${name}.png`,
+          `/dashboard/${name}.jpg`,
+          `/dashboard/${name}.png`,
+          `/banners/${name}.jpg`,
+          `/banners/${name}.png`,
+          'https://res.cloudinary.com/dacgtjw7w/image/upload/v1754972969/hero-main_fltopq.png', // final fallback/placeholder
+        ];
+      },
       [name]
     );
     const currentSrc = sources[srcIdx] ?? sources[sources.length - 1];

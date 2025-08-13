@@ -15,11 +15,10 @@ const Home: React.FC = () => {
   const [hasShop, setHasShop] = React.useState<boolean>(false);
   const [isAuthed, setIsAuthed] = React.useState<boolean>(false);
   const [signupOpen, setSignupOpen] = React.useState<boolean>(false);
-  const publicUrl = (path: string) => `/${path.replace(/^\//, '')}`;
   // Background assets
-  const heroMain = publicUrl('landing/hero-main.png');
-  const heroCustomer = publicUrl('landing/hero-customer.png');
-  const heroShopkeeper = publicUrl('landing/hero-shopkeeper.png');
+  const heroMain = 'https://res.cloudinary.com/dacgtjw7w/image/upload/v1754972969/hero-main_fltopq.png';
+  const heroCustomer = 'https://res.cloudinary.com/dacgtjw7w/image/upload/v1754972970/hero-customer_mtaast.png';
+  const heroShopkeeper = 'https://res.cloudinary.com/dacgtjw7w/image/upload/v1754972970/hero-shopkeeper_icfsid.png';
 
   React.useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
