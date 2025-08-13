@@ -2,6 +2,8 @@
 
 A modern React + Firebase application for connecting local shops with customers in Kolkata.
 
+<!-- Auto-deployment test commit -->
+
 ## 🚀 Getting Started
 
 ### Prerequisites
