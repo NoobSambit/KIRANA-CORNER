@@ -28,13 +28,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  // Temporary: allow GET to verify function routing from the browser
-  if (req.method === 'GET') {
-    return res.status(200).json({ ok: true, note: 'GET ok - function reachable', runtime: 'node', model: MODEL_NAME });
-  }
-
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed. Only POST requests are supported.' });
+  // Accept both GET and POST to avoid 405s from intermediary layers
+  const isGet = req.method === 'GET';
+  const isPost = req.method === 'POST';
+  if (!isGet && !isPost) {
+    return res.status(405).json({ error: 'Method not allowed. Use GET (for health/test) or POST (for generation).' });
   }
 
   try {
@@ -50,8 +48,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       return res.status(500).json({ error: 'AI service configuration error' });
     }
 
-    // Vercel parses JSON body for us when Content-Type is application/json
-    const { query } = (req.body ?? {}) as { query?: string };
+    // Read query from either body (POST) or querystring (GET)
+    const bodyQuery = (req.body ?? {}).query as string | undefined;
+    const queryParam = (req.query?.q as string | undefined) || (req.query?.query as string | undefined);
+    const query = bodyQuery || queryParam;
     if (!query) {
       return res.status(400).json({ error: 'Missing query parameter in request body' });
     }
