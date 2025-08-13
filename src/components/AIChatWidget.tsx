@@ -223,6 +223,11 @@ const AIChatWidget: React.FC = () => {
       if (clientToken) headers['x-ai-token'] = String(clientToken);
       
       const apiEndpoint = apiUrl('/api/ai/recipe');
+      console.log('🔍 Environment check:', {
+        VITE_AI_API_TOKEN: import.meta.env?.VITE_AI_API_TOKEN,
+        clientToken,
+        allViteEnv: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
+      });
       console.log('Making API call to:', apiEndpoint);
       
       const res = await fetch(apiEndpoint, {

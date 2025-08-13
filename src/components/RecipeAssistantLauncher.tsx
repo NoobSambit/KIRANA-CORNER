@@ -1,29 +1,25 @@
 import React from 'react';
 import { Bot } from 'lucide-react';
 
-const AIChatLauncher: React.FC = () => {
+const RecipeAssistantLauncher: React.FC = () => {
   const [open, setOpen] = React.useState(false);
-  const LazyWidget = React.useMemo(() => React.lazy(() => import('./AIChatWidget')), []);
-
-  const handleClose = () => {
-    setOpen(false);
-  };
+  const LazyWidget = React.useMemo(() => React.lazy(() => import('./RecipeAssistantWidget')), []);
 
   if (open) {
     return (
       <React.Suspense fallback={
-        <button title="Loading Kirana AI" className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-white shadow-lg shadow-orange-500/30 flex items-center justify-center opacity-70">
+        <button title="Loading Recipe Assistant" className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-white shadow-lg shadow-orange-500/30 flex items-center justify-center opacity-70">
           <Bot aria-hidden className="h-6 w-6" />
         </button>
       }>
-        <LazyWidget />
+        <LazyWidget onClose={() => setOpen(false)} />
       </React.Suspense>
     );
   }
 
   return (
     <button
-      aria-label="Open Kirana AI"
+      aria-label="Open Recipe Assistant"
       onClick={() => setOpen(true)}
       className="fixed bottom-5 right-5 z-50 h-14 w-14 rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-white shadow-lg shadow-orange-500/30 flex items-center justify-center"
     >
@@ -33,5 +29,6 @@ const AIChatLauncher: React.FC = () => {
   );
 };
 
-export default AIChatLauncher;
+export default RecipeAssistantLauncher;
+
 
