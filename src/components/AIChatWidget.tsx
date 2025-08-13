@@ -6,7 +6,14 @@ import remarkGfm from 'remark-gfm';
 import { useCart } from './CartContext';
 
 const API_BASE = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/$/, '');
-const apiUrl = (path: string) => `${API_BASE}${path}`;
+const apiUrl = (path: string) => {
+  // In development, if no API base is set, use relative paths
+  if (!API_BASE && import.meta.env.DEV) {
+    console.warn('No VITE_API_BASE_URL set. API calls may fail in development.');
+    console.warn('Run "vercel dev" in another terminal or set VITE_API_BASE_URL for production API.');
+  }
+  return `${API_BASE}${path}`;
+};
 
 type ChatRole = 'user' | 'assistant' | 'system';
 
@@ -158,7 +165,22 @@ const AIChatWidget: React.FC = () => {
       });
       if (!res.ok) {
         let msg = 'AI error';
-        try { const err = await res.json(); msg = err.error || msg; } catch {}
+        try { 
+          const err = await res.json(); 
+          msg = err.error || msg; 
+        } catch {
+          // Ignore JSON parsing errors, use default message
+        }
+        
+        // Provide more specific error messages
+        if (res.status === 405) {
+          msg = 'API method not allowed. This usually means the Vercel dev server is not running.';
+        } else if (res.status === 404) {
+          msg = 'API endpoint not found. Check if the Vercel dev server is running.';
+        } else if (res.status === 500) {
+          msg = 'Server error. Check the Vercel dev server logs.';
+        }
+        
         throw new Error(msg);
       }
       const data = (await res.json()) as { markdown: string; recipe?: RecipeResponsePayload };
@@ -232,6 +254,17 @@ const AIChatWidget: React.FC = () => {
       <HeaderBar onClose={() => setOpen(false)} />
       <QuickActions onSend={sendText} />
       <div ref={scrollerRef} className="px-3 pb-20 pt-2 h-[calc(100%-112px)] overflow-y-auto space-y-3">
+        {messages.length === 0 && (
+          <div className="text-center py-8 text-slate-500">
+            <div className="text-sm mb-2">👋 Welcome to Kirana AI!</div>
+            <div className="text-xs">Ask me for recipes, ingredients, or dietary suggestions.</div>
+            {!API_BASE && import.meta.env.DEV && (
+              <div className="text-xs mt-2 p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
+                💡 <strong>Development Mode:</strong> Run "vercel dev" in another terminal to enable local API testing.
+              </div>
+            )}
+          </div>
+        )}
         {messages.map((m) => (
           <div key={m.id} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap ${m.role === 'user' ? 'bg-gradient-to-br from-orange-500 to-green-500 text-white' : 'bg-white/80 dark:bg-white/5 border border-white/10 text-slate-900 dark:text-slate-100'}`}>

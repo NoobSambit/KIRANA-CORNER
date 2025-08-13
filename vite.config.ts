@@ -24,6 +24,12 @@ export default defineConfig({
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('Vercel dev server not running. API calls will fail in development.');
+            console.log('Run "vercel dev" in another terminal to enable local API testing.');
+          });
+        },
       },
     },
   },
