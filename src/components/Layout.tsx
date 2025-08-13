@@ -14,7 +14,7 @@ const Layout: React.FC = () => {
       <main className="flex-1">
         <Outlet />
       </main>
-      <AIChatLauncher />
+              <AIChatLauncher />
     </div>
   );
 };
