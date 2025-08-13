@@ -5,14 +5,41 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useCart } from './CartContext';
 
-const API_BASE = (import.meta.env?.VITE_API_BASE_URL || '').replace(/\/$/, '');
-const apiUrl = (path: string) => {
-  // In development, if no API base is set, use relative paths
-  if (!API_BASE && import.meta.env.DEV) {
-    console.warn('No VITE_API_BASE_URL set. API calls may fail in development.');
-    console.warn('Run "vercel dev" in another terminal or set VITE_API_BASE_URL for production API.');
+const API_BASE = (() => {
+  // If VITE_API_BASE_URL is set, use it
+  if (import.meta.env?.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '');
   }
-  return `${API_BASE}${path}`;
+  
+  // Auto-detect API base based on current domain
+  const currentHost = window.location.hostname;
+  const currentProtocol = window.location.protocol;
+  
+  if (currentHost.includes('vercel.app')) {
+    // For Vercel deployments, use the main domain for API calls
+    if (currentHost.includes('kirana-corner')) {
+      return `${currentProtocol}//kirana-corner.vercel.app`;
+    }
+  }
+  
+  // Fallback to current origin
+  return window.location.origin;
+})();
+
+const apiUrl = (path: string) => {
+  const fullUrl = `${API_BASE}${path}`;
+  
+  // Debug logging in development
+  if (import.meta.env.DEV) {
+    console.log('API Call Debug:', {
+      path,
+      API_BASE,
+      fullUrl,
+      currentOrigin: window.location.origin
+    });
+  }
+  
+  return fullUrl;
 };
 
 type ChatRole = 'user' | 'assistant' | 'system';
@@ -46,7 +73,8 @@ const quickPrompts = [
   'Find a recipe from my stock',
   'Suggest dinner for tonight',
   'Healthy breakfast ideas',
-  'Show me popular recipes nearby'
+  'Show me popular recipes nearby',
+  'Test API Connection'
 ];
 
 const FloatingPulseButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
@@ -150,6 +178,41 @@ const AIChatWidget: React.FC = () => {
 
   const sendText = useCallback(async (text: string) => {
     if (!text.trim()) return;
+    
+    // Handle test API connection
+    if (text === 'Test API Connection') {
+      const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text };
+      append(userMsg);
+      setLoading(true);
+      
+      try {
+        const testEndpoint = apiUrl('/api/debug');
+        console.log('Testing API connection to:', testEndpoint);
+        
+        const res = await fetch(testEndpoint, { method: 'GET' });
+        if (res.ok) {
+          const data = await res.json();
+          append({ 
+            id: crypto.randomUUID(), 
+            role: 'assistant', 
+            content: `✅ API Connection Test Successful!\n\nAPI Base: ${API_BASE}\nEndpoint: ${testEndpoint}\nResponse: ${JSON.stringify(data, null, 2)}` 
+          });
+        } else {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        append({ 
+          id: crypto.randomUUID(), 
+          role: 'assistant', 
+          content: `❌ API Connection Test Failed!\n\nAPI Base: ${API_BASE}\nError: ${message}` 
+        });
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+    
     const userMsg: ChatMessage = { id: crypto.randomUUID(), role: 'user', content: text };
     append(userMsg);
     setInput('');
@@ -158,7 +221,11 @@ const AIChatWidget: React.FC = () => {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       const clientToken = import.meta.env?.VITE_AI_API_TOKEN;
       if (clientToken) headers['x-ai-token'] = String(clientToken);
-      const res = await fetch(apiUrl('/api/ai/recipe'), {
+      
+      const apiEndpoint = apiUrl('/api/ai/recipe');
+      console.log('Making API call to:', apiEndpoint);
+      
+      const res = await fetch(apiEndpoint, {
         method: 'POST',
         headers,
         body: JSON.stringify({ query: text })
@@ -198,6 +265,11 @@ const AIChatWidget: React.FC = () => {
       append(assistantMsg);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unknown error';
+      console.error('API call failed:', {
+        endpoint: apiUrl('/api/ai/recipe'),
+        error: err,
+        message
+      });
       append({ id: crypto.randomUUID(), role: 'assistant', content: `Sorry, I had trouble fetching that. ${message}` });
     } finally {
       setLoading(false);
@@ -258,6 +330,14 @@ const AIChatWidget: React.FC = () => {
           <div className="text-center py-8 text-slate-500">
             <div className="text-sm mb-2">👋 Welcome to Kirana AI!</div>
             <div className="text-xs">Ask me for recipes, ingredients, or dietary suggestions.</div>
+            {import.meta.env.DEV && (
+              <div className="text-xs mt-2 p-2 bg-blue-100 dark:bg-blue-900/20 rounded-lg">
+                🔧 <strong>Debug Info:</strong><br/>
+                API Base: {API_BASE}<br/>
+                Current Origin: {window.location.origin}<br/>
+                Click "Test API Connection" to verify API setup
+              </div>
+            )}
             {!API_BASE && import.meta.env.DEV && (
               <div className="text-xs mt-2 p-2 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg">
                 💡 <strong>Development Mode:</strong> Run "vercel dev" in another terminal to enable local API testing.
