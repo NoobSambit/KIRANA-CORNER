@@ -1,7 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-// Simple recipe API without external dependencies for now
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+// Recipe API - Vercel Serverless Function
+export default function handler(req: VercelRequest, res: VercelResponse) {
   // Enhanced CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -35,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-
+    console.log('✅ POST request received, processing...');
     const { query } = req.body;
 
     if (!query) {
