@@ -69,6 +69,11 @@ const AIChatBot: React.FC<AIChatBotProps> = ({ onClose }) => {
     setIsLoading(true);
 
     try {
+      // Enhanced debugging for API call
+      console.log('🔄 Making API request to /api/recipe');
+      console.log('📝 Method: POST');
+      console.log('📝 Body:', JSON.stringify({ query: userInput }));
+      
       // Call recipe API
       const response = await fetch('/api/recipe', {
         method: 'POST',
@@ -77,6 +82,8 @@ const AIChatBot: React.FC<AIChatBotProps> = ({ onClose }) => {
         },
         body: JSON.stringify({ query: userInput })
       });
+      
+      console.log('📨 Response received:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorText = await response.text();

@@ -2,23 +2,39 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Simple recipe API without external dependencies for now
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  // CORS Headers
+  // Enhanced CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Allow-Credentials', 'false');
+
+  // Enhanced logging for debugging
+  console.log('🚀 Recipe API called');
+  console.log('📝 Request method:', req.method);
+  console.log('📝 Request headers:', JSON.stringify(req.headers, null, 2));
+  console.log('📝 Request body:', req.body);
+  console.log('📝 Request query:', req.query);
+  console.log('📝 Request URL:', req.url);
 
   if (req.method === 'OPTIONS') {
+    console.log('✅ Handling OPTIONS preflight request');
     return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+    console.log('❌ Method not allowed:', req.method);
+    return res.status(405).json({ 
+      error: 'Method not allowed. Use POST.',
+      received_method: req.method,
+      allowed_methods: ['POST'],
+      debug_info: {
+        url: req.url,
+        headers: req.headers
+      }
+    });
   }
 
   try {
-    console.log('🚀 Recipe API called');
-    console.log('📝 Request method:', req.method);
-    console.log('📝 Request body:', req.body);
 
     const { query } = req.body;
 
