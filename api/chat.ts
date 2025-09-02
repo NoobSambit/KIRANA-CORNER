@@ -1,27 +1,33 @@
-import { VercelRequest, VercelResponse } from '@vercel/node';
+export const runtime = 'edge';
 
-export default async function handler(req: VercelRequest, res: VercelResponse) {
-	res.setHeader('Access-Control-Allow-Origin', '*');
-	res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-	res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+export default async function handler(request: Request): Promise<Response> {
+	const headers = new Headers({
+		'Access-Control-Allow-Origin': '*',
+		'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+		'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+	});
 
-	if (req.method === 'OPTIONS') {
-		return res.status(200).end();
+	if (request.method === 'OPTIONS') {
+		return new Response(null, { status: 200, headers });
 	}
 
-	if (req.method === 'GET') {
-		return res.status(200).send('Chat API is live. Send POST {"prompt":"..."}.');
+	if (request.method === 'GET') {
+		return new Response('Chat API is live. Send POST {"prompt":"..."}.', { status: 200, headers });
 	}
 
-	if (req.method !== 'POST') {
-		return res.status(405).json({ error: 'Method not allowed. Use POST.' });
+	if (request.method !== 'POST') {
+		return new Response(JSON.stringify({ error: 'Method not allowed. Use POST.' }), {
+			status: 405,
+			headers
+		});
 	}
 
 	try {
-		const { prompt } = req.body || {};
-		const text = prompt?.trim() ? `You asked: "${prompt}". Here is a simple response.` : 'Hello! Ask me anything.';
-		return res.status(200).send(text);
+		const body = await request.json().catch(() => ({}));
+		const prompt = typeof body?.prompt === 'string' ? body.prompt.trim() : '';
+		const text = prompt ? `You asked: "${prompt}". Here is a simple response.` : 'Hello! Ask me anything.';
+		return new Response(text, { status: 200, headers });
 	} catch (e: any) {
-		return res.status(500).json({ error: e?.message || 'Unknown error' });
+		return new Response(JSON.stringify({ error: e?.message || 'Unknown error' }), { status: 500, headers });
 	}
 }
