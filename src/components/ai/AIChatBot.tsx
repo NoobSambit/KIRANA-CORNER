@@ -70,7 +70,7 @@ const AIChatBot: React.FC<AIChatBotProps> = ({ onClose }) => {
 
     try {
       // Call recipe API
-      const response = await fetch('/api/ai/recipe', {
+      const response = await fetch('/api/recipe', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
