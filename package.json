@@ -13,6 +13,8 @@
     "vercel-build": "vite build"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "@vercel/node": "^3.2.29",
     "firebase": "^11.10.0",
     "firebase-admin": "^13.4.0",
     "framer-motion": "^11.0.0",
