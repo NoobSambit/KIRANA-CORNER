@@ -3,7 +3,6 @@ import { Outlet } from 'react-router-dom';
 import Navbar from './Navbar';
 import CartDrawer from './CartDrawer';
 import { useCart } from './CartContext';
-import MinimalChatWidget from './ai/MinimalChatWidget';
 
 const Layout: React.FC = () => {
   const { cartDrawerOpen, closeCartDrawer } = useCart();
@@ -14,7 +13,6 @@ const Layout: React.FC = () => {
       <main className="flex-1">
         <Outlet />
       </main>
-      <MinimalChatWidget />
     </div>
   );
 };
