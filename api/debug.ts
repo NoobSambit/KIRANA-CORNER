@@ -45,7 +45,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       vercelEnv: process.env.VERCEL_ENV,
       hasGeminiKey: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
       hasAiToken: !!process.env.AI_API_TOKEN,
-      geminiModel: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash'
+      geminiModel: process.env.GEMINI_MODEL_NAME || 'gemini-2.0-flash',
+      geminiKeyLength: process.env.GOOGLE_GENERATIVE_AI_API_KEY?.length || 0,
+      allEnvKeys: Object.keys(process.env).filter(key => key.startsWith('GOOGLE_') || key.startsWith('AI_') || key.startsWith('GEMINI_'))
     }
   });
 }

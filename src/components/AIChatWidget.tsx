@@ -222,7 +222,7 @@ const AIChatWidget: React.FC = () => {
       const clientToken = import.meta.env?.VITE_AI_API_TOKEN;
       if (clientToken) headers['x-ai-token'] = String(clientToken);
       
-      const apiEndpoint = apiUrl('/api/ai/recipe');
+      const apiEndpoint = apiUrl('/api/recipe');
       console.log('🔍 Environment check:', {
         VITE_AI_API_TOKEN: import.meta.env?.VITE_AI_API_TOKEN,
         clientToken,
