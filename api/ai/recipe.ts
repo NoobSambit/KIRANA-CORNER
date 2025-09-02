@@ -1,25 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import { initializeApp, getApps, cert } from 'firebase-admin/app';
-import { getFirestore } from 'firebase-admin/firestore';
 
-// Initialize Firebase Admin (only once)
-if (!getApps().length) {
-  try {
-    initializeApp({
-      credential: cert({
-        projectId: process.env.FIREBASE_PROJECT_ID,
-        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      }),
-    });
-  } catch (error) {
-    console.warn('Firebase Admin initialization failed, using client SDK fallback:', error);
-  }
-}
-
-const db = getFirestore();
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_GENERATIVE_AI_API_KEY!);
+// Initialize Gemini AI
+const API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.VITE_GOOGLE_GENERATIVE_AI_API_KEY;
+const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
 interface RecipeRequest {
   query: string;
@@ -49,7 +33,7 @@ interface RecipeResponse {
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
@@ -57,10 +41,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    return res.status(405).json({ error: 'Method not allowed. Use POST.' });
   }
 
   try {
+    console.log('🚀 Recipe API called');
+    console.log('📝 Request method:', req.method);
+    console.log('📝 Request body:', req.body);
+
     const { query } = req.body as RecipeRequest;
 
     if (!query) {
@@ -68,6 +56,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     console.log('🍳 Generating recipe for:', query);
+
+    // Check if Gemini AI is available
+    if (!genAI) {
+      console.error('❌ Gemini AI not initialized - missing API key');
+      return res.status(500).json({ 
+        error: 'AI service not configured',
+        details: 'Missing GOOGLE_GENERATIVE_AI_API_KEY environment variable'
+      });
+    }
 
     // STEP 1: Generate Recipe using Gemini AI
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
@@ -114,10 +111,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     console.log('✅ Parsed recipe:', recipe);
 
-    // STEP 2: Match ingredients with Firebase catalog
-    const inventoryMatch = await matchIngredientsWithCatalog(recipe.ingredients);
-
-    console.log('📦 Inventory match results:', inventoryMatch);
+    // STEP 2: For now, return mock inventory data (we'll implement real matching later)
+    const inventoryMatch = {
+      available: [
+        {
+          ingredient: recipe.ingredients[0] || "onions",
+          product: {
+            id: "mock1",
+            name: "Fresh Onions",
+            price: 30,
+            image: "https://via.placeholder.com/100"
+          },
+          shop: {
+            id: "shop1",
+            name: "Local Grocery Store",
+            address: "Near you"
+          }
+        }
+      ],
+      unavailable: recipe.ingredients.slice(3) || [],
+      alternatives: [
+        {
+          ingredient: recipe.ingredients[1] || "tomatoes",
+          alternative: {
+            id: "mock2",
+            name: "Cherry Tomatoes",
+            price: 50,
+            image: "https://via.placeholder.com/100"
+          },
+          shop: {
+            id: "shop1",
+            name: "Local Grocery Store",
+            address: "Near you"
+          }
+        }
+      ]
+    };
 
     // STEP 3: Prepare final response
     const response: RecipeResponse = {
@@ -128,6 +157,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       inventoryMatch
     };
 
+    console.log('✅ Sending response:', response);
     return res.status(200).json(response);
 
   } catch (error) {
@@ -139,145 +169,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 }
 
-// FIREBASE CATALOG MATCHING FUNCTION
-async function matchIngredientsWithCatalog(ingredients: string[]) {
-  const available = [];
-  const unavailable = [];
-  const alternatives = [];
-
-  console.log('🔍 Matching ingredients:', ingredients);
-
-  try {
-    // Get all shops from Firebase
-    const shopsSnapshot = await db.collection('shops').get();
-    console.log('🏪 Found shops:', shopsSnapshot.size);
-
-    for (const ingredient of ingredients) {
-      console.log(`🔎 Searching for: ${ingredient}`);
-      
-      let foundExact = false;
-      const similarItems = [];
-
-      // Search through each shop's catalog
-      for (const shopDoc of shopsSnapshot.docs) {
-        const shopData = shopDoc.data();
-        
-        try {
-          // Get catalog subcollection
-          const catalogSnapshot = await db
-            .collection(`shops/${shopDoc.id}/catalog`)
-            .get();
-
-          for (const productDoc of catalogSnapshot.docs) {
-            const product = productDoc.data();
-            const productName = product.name?.toLowerCase() || '';
-            const searchTerm = ingredient.toLowerCase();
-
-            // EXACT MATCH CHECK
-            if (
-              productName.includes(searchTerm) || 
-              searchTerm.includes(productName) ||
-              productName === searchTerm
-            ) {
-              available.push({
-                ingredient,
-                product: {
-                  id: productDoc.id,
-                  ...product
-                },
-                shop: {
-                  id: shopDoc.id,
-                  name: shopData.name,
-                  address: shopData.address
-                }
-              });
-              foundExact = true;
-              console.log(`✅ Found exact match: ${product.name} in ${shopData.name}`);
-            }
-            // SIMILARITY CHECK (for alternatives)
-            else if (calculateSimilarity(productName, searchTerm) > 0.4) {
-              similarItems.push({
-                ingredient,
-                alternative: {
-                  id: productDoc.id,
-                  ...product
-                },
-                shop: {
-                  id: shopDoc.id,
-                  name: shopData.name,
-                  address: shopData.address
-                },
-                similarity: calculateSimilarity(productName, searchTerm)
-              });
-            }
-          }
-        } catch (catalogError) {
-          console.warn(`⚠️ Could not access catalog for shop ${shopDoc.id}:`, catalogError);
-        }
-      }
-
-      // If no exact match found, add to alternatives or unavailable
-      if (!foundExact) {
-        if (similarItems.length > 0) {
-          // Sort by similarity and take top 2
-          const topAlternatives = similarItems
-            .sort((a, b) => b.similarity - a.similarity)
-            .slice(0, 2);
-          alternatives.push(...topAlternatives);
-          console.log(`🔄 Found ${topAlternatives.length} alternatives for ${ingredient}`);
-        } else {
-          unavailable.push(ingredient);
-          console.log(`❌ No matches found for ${ingredient}`);
-        }
-      }
-    }
-
-  } catch (error) {
-    console.error('❌ Error matching ingredients:', error);
-  }
-
-  return {
-    available: available.slice(0, 10), // Limit results
-    unavailable,
-    alternatives: alternatives.slice(0, 6) // Limit alternatives
-  };
-}
-
-// SIMILARITY CALCULATION FUNCTION
-function calculateSimilarity(str1: string, str2: string): number {
-  const longer = str1.length > str2.length ? str1 : str2;
-  const shorter = str1.length > str2.length ? str2 : str1;
-  
-  if (longer.length === 0) return 1.0;
-  
-  return (longer.length - editDistance(longer, shorter)) / longer.length;
-}
-
-// LEVENSHTEIN DISTANCE FUNCTION
-function editDistance(str1: string, str2: string): number {
-  const matrix = [];
-  
-  for (let i = 0; i <= str2.length; i++) {
-    matrix[i] = [i];
-  }
-  
-  for (let j = 0; j <= str1.length; j++) {
-    matrix[0][j] = j;
-  }
-  
-  for (let i = 1; i <= str2.length; i++) {
-    for (let j = 1; j <= str1.length; j++) {
-      if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
-        matrix[i][j] = matrix[i - 1][j - 1];
-      } else {
-        matrix[i][j] = Math.min(
-          matrix[i - 1][j - 1] + 1, // substitution
-          matrix[i][j - 1] + 1,     // insertion
-          matrix[i - 1][j] + 1      // deletion
-        );
-      }
-    }
-  }
-  
-  return matrix[str2.length][str1.length];
-}
+// Note: Firebase catalog matching will be implemented later
+// For now, we're using mock data to get the basic functionality working
