@@ -229,6 +229,7 @@ const AIChatWidget: React.FC = () => {
         allViteEnv: Object.keys(import.meta.env).filter(key => key.startsWith('VITE_'))
       });
       console.log('Making API call to:', apiEndpoint);
+      console.log('🚀 Using updated recipe endpoint - Build:', new Date().toISOString());
       
       const res = await fetch(apiEndpoint, {
         method: 'POST',
