@@ -10,19 +10,23 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(200).end();
   }
 
-  console.log('🧪 Test API called');
-  console.log('📝 Method:', req.method);
-  console.log('📝 Headers:', req.headers);
-  console.log('📝 Body:', req.body);
+  try {
+    console.log('🧪 Test API called');
+    console.log('📝 Method:', req.method);
+    console.log('📝 Body:', req.body);
 
-  return res.status(200).json({ 
-    message: 'API is working!', 
-    method: req.method,
-    timestamp: new Date().toISOString(),
-    env: {
-      hasGeminiKey: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-      hasViteGeminiKey: !!process.env.VITE_GOOGLE_GENERATIVE_AI_API_KEY,
-      nodeEnv: process.env.NODE_ENV
-    }
-  });
+    return res.status(200).json({ 
+      message: 'API is working perfectly!', 
+      method: req.method,
+      timestamp: new Date().toISOString(),
+      body: req.body,
+      success: true
+    });
+  } catch (error) {
+    console.error('Test API error:', error);
+    return res.status(500).json({ 
+      error: 'Test API failed',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
 }

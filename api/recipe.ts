@@ -1,21 +1,7 @@
-// Try to import Gemini AI, but don't fail if it's not available
-let GoogleGenerativeAI;
-let genAI = null;
+import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-try {
-  const geminiModule = require('@google/generative-ai');
-  GoogleGenerativeAI = geminiModule.GoogleGenerativeAI;
-  
-  // Initialize Gemini AI
-  const API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.VITE_GOOGLE_GENERATIVE_AI_API_KEY;
-  if (API_KEY) {
-    genAI = new GoogleGenerativeAI(API_KEY);
-  }
-} catch (error) {
-  console.warn('Failed to initialize Gemini AI:', error.message);
-}
-
-module.exports = async function handler(req, res) {
+// Simple recipe API without external dependencies for now
+export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -42,62 +28,9 @@ module.exports = async function handler(req, res) {
 
     console.log('🍳 Generating recipe for:', query);
 
-    let recipe;
-
-    // STEP 1: Try to Generate Recipe using Gemini AI, with fallback
-    if (genAI) {
-      try {
-        console.log('🤖 Attempting Gemini AI generation...');
-        const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
-
-        const prompt = `
-          Create a detailed recipe for: "${query}"
-          
-          Return ONLY a JSON object with this EXACT structure (no additional text):
-          {
-            "title": "Recipe name",
-            "description": "Brief appetizing description (1-2 sentences)",
-            "ingredients": ["ingredient1", "ingredient2", "ingredient3"],
-            "instructions": ["Step 1: ...", "Step 2: ...", "Step 3: ..."]
-          }
-          
-          Requirements:
-          - Keep ingredients simple and generic (e.g., "onions", "tomatoes", "rice", "chicken")
-          - Include 6-12 ingredients
-          - Provide 5-8 clear cooking steps
-          - Make it authentic and delicious
-        `;
-
-        const result = await model.generateContent(prompt);
-        const text = result.response.text();
-        
-        console.log('🤖 Raw Gemini response:', text);
-
-        // Parse JSON response from Gemini
-        try {
-          // Clean the response (remove any markdown formatting)
-          const cleanText = text.replace(/```json\n?|\n?```/g, '').trim();
-          recipe = JSON.parse(cleanText);
-          console.log('✅ Successfully parsed Gemini recipe:', recipe);
-        } catch (parseError) {
-          console.error('❌ JSON parsing failed:', parseError);
-          throw parseError; // This will trigger the fallback
-        }
-
-      } catch (aiError) {
-        console.error('❌ Gemini AI failed:', aiError);
-        console.log('🔄 Using fallback recipe generation...');
-        recipe = null; // Trigger fallback
-      }
-    } else {
-      console.log('⚠️ Gemini AI not available, using fallback...');
-    }
-
-    // Fallback recipe generation if AI fails
-    if (!recipe) {
-      console.log('📝 Generating fallback recipe...');
-      recipe = generateFallbackRecipe(query);
-    }
+    // For now, just use fallback recipes to ensure it works
+    console.log('📝 Generating fallback recipe...');
+    const recipe = generateFallbackRecipe(query);
 
     console.log('✅ Final recipe:', recipe);
 
@@ -160,7 +93,7 @@ module.exports = async function handler(req, res) {
 }
 
 // Fallback recipe generation function
-function generateFallbackRecipe(query) {
+function generateFallbackRecipe(query: string) {
   const recipes = {
     'chicken curry': {
       title: 'Classic Chicken Curry',
