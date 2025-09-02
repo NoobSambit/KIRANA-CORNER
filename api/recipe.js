@@ -1,36 +1,10 @@
-import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
 // Initialize Gemini AI
 const API_KEY = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.VITE_GOOGLE_GENERATIVE_AI_API_KEY;
 const genAI = API_KEY ? new GoogleGenerativeAI(API_KEY) : null;
 
-interface RecipeRequest {
-  query: string;
-  userLocation?: { lat: number; lng: number };
-}
-
-interface RecipeResponse {
-  title: string;
-  description: string;
-  ingredients: string[];
-  instructions: string[];
-  inventoryMatch: {
-    available: Array<{
-      ingredient: string;
-      product: any;
-      shop: any;
-    }>;
-    unavailable: string[];
-    alternatives: Array<{
-      ingredient: string;
-      alternative: any;
-      shop: any;
-    }>;
-  };
-}
-
-export default async function handler(req: VercelRequest, res: VercelResponse) {
+module.exports = async function handler(req, res) {
   // CORS Headers
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -49,7 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     console.log('📝 Request method:', req.method);
     console.log('📝 Request body:', req.body);
 
-    const { query } = req.body as RecipeRequest;
+    const { query } = req.body;
 
     if (!query) {
       return res.status(400).json({ error: 'Query is required' });
@@ -149,7 +123,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     };
 
     // STEP 3: Prepare final response
-    const response: RecipeResponse = {
+    const response = {
       title: recipe.title,
       description: recipe.description,
       ingredients: recipe.ingredients,
