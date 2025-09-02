@@ -18,6 +18,12 @@ export default defineConfig({
     },
   },
   server: {
-    // API calls will go directly to the deployed endpoints
+    proxy: {
+      '/api': {
+        target: 'http://localhost:3001',
+        changeOrigin: true,
+        rewrite: (path) => path
+      }
+    }
   },
 });

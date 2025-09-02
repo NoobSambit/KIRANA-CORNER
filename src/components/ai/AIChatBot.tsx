@@ -79,7 +79,26 @@ const AIChatBot: React.FC<AIChatBotProps> = ({ onClose }) => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate recipe');
+        const errorText = await response.text();
+        console.error('API Error Response:', response.status, errorText);
+        
+        // Development fallback: if API is not available (404), use mock data
+        if (response.status === 404) {
+          console.warn('API endpoint not available, using development fallback');
+          const data: RecipeData = generateDevFallbackRecipe(userInput);
+          
+          const botMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            type: 'bot',
+            content: `Here's a great recipe for ${data.title}! (Development Mode - API not available)`,
+            recipe: data,
+            timestamp: new Date()
+          };
+          setMessages(prev => [...prev, botMessage]);
+          return;
+        }
+        
+        throw new Error(`API Error (${response.status}): ${errorText || 'Failed to generate recipe'}`);
       }
 
       const data: RecipeData = await response.json();
@@ -100,7 +119,7 @@ const AIChatBot: React.FC<AIChatBotProps> = ({ onClose }) => {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: 'Sorry, I encountered an error while generating the recipe. Please try again.',
+        content: `Sorry, I encountered an error while generating the recipe: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
         timestamp: new Date()
       };
       setMessages(prev => [...prev, errorMessage]);
@@ -222,5 +241,122 @@ const AIChatBot: React.FC<AIChatBotProps> = ({ onClose }) => {
     </motion.div>
   );
 };
+
+// Development fallback function for when API is not available
+function generateDevFallbackRecipe(query: string): RecipeData {
+  const recipes = {
+    'chicken curry': {
+      title: 'Classic Chicken Curry',
+      description: 'A rich and flavorful chicken curry with aromatic spices, perfect for dinner.',
+      ingredients: ['chicken', 'onions', 'tomatoes', 'garlic', 'ginger', 'curry powder', 'coconut milk', 'oil', 'salt', 'cilantro'],
+      instructions: [
+        'Heat oil in a large pan over medium heat',
+        'Add diced onions and cook until golden brown',
+        'Add minced garlic and ginger, cook for 1 minute',
+        'Add chicken pieces and brown on all sides',
+        'Add tomatoes and curry powder, cook for 5 minutes',
+        'Pour in coconut milk and simmer for 20 minutes',
+        'Season with salt and garnish with cilantro',
+        'Serve hot with rice'
+      ]
+    },
+    'pasta': {
+      title: 'Simple Pasta Recipe',
+      description: 'Quick and easy pasta dish that\'s perfect for any meal.',
+      ingredients: ['pasta', 'olive oil', 'garlic', 'tomatoes', 'basil', 'parmesan cheese', 'salt', 'black pepper'],
+      instructions: [
+        'Boil water in a large pot with salt',
+        'Add pasta and cook according to package directions',
+        'Heat olive oil in a pan, add minced garlic',
+        'Add diced tomatoes and cook for 5 minutes',
+        'Drain pasta and add to the pan',
+        'Toss with fresh basil and parmesan cheese',
+        'Season with salt and pepper',
+        'Serve immediately'
+      ]
+    }
+  };
+
+  // Find matching recipe or create generic one
+  const lowerQuery = query.toLowerCase();
+  
+  for (const [key, recipe] of Object.entries(recipes)) {
+    if (lowerQuery.includes(key) || key.includes(lowerQuery)) {
+      return {
+        ...recipe,
+        inventoryMatch: {
+          available: [
+            {
+              ingredient: recipe.ingredients[0] || "main ingredient",
+              product: {
+                id: "dev1",
+                name: `Fresh ${recipe.ingredients[0] || "Ingredient"}`,
+                price: 50,
+                image: "https://via.placeholder.com/100"
+              },
+              shop: {
+                id: "devshop1",
+                name: "Development Store",
+                address: "Local Area"
+              }
+            }
+          ],
+          unavailable: recipe.ingredients.slice(3) || [],
+          alternatives: [
+            {
+              ingredient: recipe.ingredients[1] || "alternative",
+              alternative: {
+                id: "dev2",
+                name: `Alternative ${recipe.ingredients[1] || "Item"}`,
+                price: 40,
+                image: "https://via.placeholder.com/100"
+              },
+              shop: {
+                id: "devshop1",
+                name: "Development Store",
+                address: "Local Area"
+              }
+            }
+          ]
+        }
+      };
+    }
+  }
+
+  // Generic fallback recipe
+  return {
+    title: `Recipe for ${query}`,
+    description: 'A delicious homemade recipe crafted just for you! (Development Mode)',
+    ingredients: ['main ingredient', 'onions', 'garlic', 'spices', 'oil', 'salt'],
+    instructions: [
+      'Prepare all ingredients by washing and chopping',
+      'Heat oil in a pan over medium heat',
+      'Add aromatics and cook until fragrant',
+      'Add main ingredients and cook thoroughly',
+      'Season to taste with salt and spices',
+      'Serve hot and enjoy!'
+    ],
+    inventoryMatch: {
+      available: [
+        {
+          ingredient: "main ingredient",
+          product: {
+            id: "dev1",
+            name: "Development Ingredient",
+            price: 30,
+            image: "https://via.placeholder.com/100"
+          },
+          shop: {
+            id: "devshop1",
+            name: "Development Store",
+            address: "Local Area"
+          }
+        }
+      ],
+      unavailable: ['spices', 'oil'],
+      alternatives: []
+    }
+  };
+}
 
 export default AIChatBot;
