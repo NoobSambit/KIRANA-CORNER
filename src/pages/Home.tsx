@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import StatsCard from '../components/StatsCard';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { 
   ShoppingBag, Store, Users, Truck, Shield, Star, MapPin, 
   ArrowRight, CheckCircle, Heart, Mail, Phone, 
@@ -13,12 +13,15 @@ import { auth } from '../firebase';
 // @ts-expect-error: Importing from JS module without type declaration
 import { getShopByOwnerId } from '../utils/shopService';
 import SignupModal from '../components/SignupModal';
+import LoginModal from '../components/LoginModal';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [hasShop, setHasShop] = React.useState<boolean>(false);
   const [isAuthed, setIsAuthed] = React.useState<boolean>(false);
   const [signupOpen, setSignupOpen] = React.useState<boolean>(false);
+  const [loginOpen, setLoginOpen] = React.useState<boolean>(false);
   
   // Parallax scroll effects
   const { scrollY } = useScroll();
@@ -35,6 +38,28 @@ const Home: React.FC = () => {
       }
     });
     return () => unsub();
+  }, []);
+
+  // Check URL params for login modal
+  React.useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('login') === 'true') {
+      setLoginOpen(true);
+      // Clean up URL without causing re-render
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, [location.search]);
+
+  // Listen for custom event to open login modal
+  React.useEffect(() => {
+    const handleOpenLoginModal = () => {
+      setLoginOpen(true);
+    };
+    window.addEventListener('openLoginModal', handleOpenLoginModal);
+    return () => {
+      window.removeEventListener('openLoginModal', handleOpenLoginModal);
+    };
   }, []);
 
   const goSignup = (role: 'customer' | 'shopowner') => {
@@ -601,6 +626,7 @@ const Home: React.FC = () => {
       </footer>
 
       <SignupModal isOpen={signupOpen} onClose={() => setSignupOpen(false)} />
+      <LoginModal isOpen={loginOpen} onClose={() => setLoginOpen(false)} />
     </div>
   );
 };

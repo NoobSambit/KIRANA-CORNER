@@ -1,9 +1,9 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, User, ShoppingCart, Search } from 'lucide-react';
+import { ShoppingBag, User, ShoppingCart, Search, LogOut, Store } from 'lucide-react';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import { useCart } from './CartContext';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 // @ts-expect-error: Importing from JS module without type declaration
 import { auth } from '../firebase';
 // @ts-expect-error: Importing from JS module without type declaration
@@ -16,20 +16,24 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const { cart, openCartDrawer } = useCart();
   const [role, setRole] = React.useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [accountOpen, setAccountOpen] = React.useState(false);
   const { searchQuery, setSearchQuery } = useSearch();
 
   React.useEffect(() => {
     if (!auth) {
       setRole(null);
+      setIsLoggedIn(false);
       return;
     }
 
     const unsub = onAuthStateChanged(auth, async (user) => {
       if (!user) {
         setRole(null);
+        setIsLoggedIn(false);
         return;
       }
+      setIsLoggedIn(true);
       try {
         const res = await getUserData(user.uid);
         if (res.success) setRole(res.data.role || null);
@@ -144,27 +148,80 @@ const Navbar: React.FC = () => {
             )}
             {isHome ? (
               <>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate('/login')}
-                  className="px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-full border border-white/20 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 transition-all duration-300 backdrop-blur-sm shadow-lg hover:shadow-xl text-sm sm:text-base"
-                  title="Sign in to your account"
-                >
-                  <span className="hidden sm:inline">Login</span>
-                  <span className="sm:hidden">Sign In</span>
-                </motion.button>
-                <motion.button
-                  onClick={() => navigate('/signup', { state: { selectedRole: 'shopowner' } })}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="relative px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-full bg-gradient-to-r from-orange-500 to-green-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
-                  title="Join your neighborhood network"
-                >
-                  <span className="hidden sm:inline">Get Started</span>
-                  <span className="sm:hidden">Join</span>
-                  <span className="pointer-events-none absolute -inset-0.5 rounded-full shadow-[0_0_30px_0] shadow-green-400/0 animate-[pulse_3.5s_ease-in-out_infinite]" />
-                </motion.button>
+                {isLoggedIn ? (
+                  <>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => navigate('/dashboard')}
+                      className="px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-full border border-white/20 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 transition-all duration-300 backdrop-blur-sm shadow-lg hover:shadow-xl text-sm sm:text-base flex items-center gap-2"
+                      title={`Go to ${role === 'shopowner' ? 'Shop' : 'Customer'} Dashboard`}
+                    >
+                      {role === 'shopowner' ? (
+                        <>
+                          <Store className="h-4 w-4" />
+                          <span className="hidden sm:inline">Shopkeeper</span>
+                          <span className="sm:hidden">Shop</span>
+                        </>
+                      ) : (
+                        <>
+                          <User className="h-4 w-4" />
+                          <span className="hidden sm:inline">Customer</span>
+                          <span className="sm:hidden">Customer</span>
+                        </>
+                      )}
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={async () => {
+                        try {
+                          await signOut(auth);
+                          navigate('/');
+                        } catch (error) {
+                          console.error('Logout error:', error);
+                        }
+                      }}
+                      className="px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-full border border-red-500/30 text-red-300 hover:text-red-100 bg-red-500/10 hover:bg-red-500/20 transition-all duration-300 backdrop-blur-sm shadow-lg hover:shadow-xl text-sm sm:text-base flex items-center gap-2"
+                      title="Sign out"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      <span className="hidden sm:inline">Logout</span>
+                      <span className="sm:hidden">Out</span>
+                    </motion.button>
+                  </>
+                ) : (
+                  <>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        if (location.pathname === '/') {
+                          // If already on home, trigger modal via custom event
+                          window.dispatchEvent(new CustomEvent('openLoginModal'));
+                        } else {
+                          navigate('/?login=true');
+                        }
+                      }}
+                      className="px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-full border border-white/20 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 transition-all duration-300 backdrop-blur-sm shadow-lg hover:shadow-xl text-sm sm:text-base"
+                      title="Sign in to your account"
+                    >
+                      <span className="hidden sm:inline">Login</span>
+                      <span className="sm:hidden">Sign In</span>
+                    </motion.button>
+                    <motion.button
+                      onClick={() => navigate('/signup', { state: { selectedRole: 'shopowner' } })}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="relative px-3 sm:px-4 md:px-6 py-2 sm:py-2.5 md:py-3 rounded-full bg-gradient-to-r from-orange-500 to-green-500 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-300 text-sm sm:text-base"
+                      title="Join your neighborhood network"
+                    >
+                      <span className="hidden sm:inline">Get Started</span>
+                      <span className="sm:hidden">Join</span>
+                      <span className="pointer-events-none absolute -inset-0.5 rounded-full shadow-[0_0_30px_0] shadow-green-400/0 animate-[pulse_3.5s_ease-in-out_infinite]" />
+                    </motion.button>
+                  </>
+                )}
               </>
             ) : (
               <>
