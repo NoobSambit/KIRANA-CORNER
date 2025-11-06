@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, Store, Package, Settings, Calendar, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -36,8 +37,6 @@ const AccountDrawer: React.FC<AccountDrawerProps> = ({ isOpen, onClose, role }) 
     }
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const go = (path: string) => {
     onClose();
     navigate(path);
@@ -45,22 +44,23 @@ const AccountDrawer: React.FC<AccountDrawerProps> = ({ isOpen, onClose, role }) 
 
   const isShopOwner = role === 'shopowner';
 
-  return (
-    <div className={`fixed inset-0 z-50 flex justify-end transition-all duration-300 ${isOpen ? '' : 'pointer-events-none'}`}>
+  if (!isOpen) return null;
+
+  const drawerContent = (
+    <div className="fixed inset-0 z-[100] flex justify-end pointer-events-auto">
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/30 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+        className="fixed inset-0 bg-black/30 transition-opacity duration-300 opacity-100 pointer-events-auto"
         onClick={onClose}
         aria-label="Close account panel"
       />
       {/* Drawer */}
       <aside
-        className={`relative w-full sm:w-[380px] h-screen shadow-2xl border-l border-slate-200 transition-transform duration-300 ease-in-out flex flex-col ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        className="relative w-full sm:w-[380px] max-h-[85vh] mt-[15vh] shadow-2xl border-l border-slate-200 rounded-t-2xl transition-transform duration-300 ease-in-out flex flex-col translate-x-0 pointer-events-auto"
         style={{ 
           backgroundColor: '#FFFFFF',
           background: '#FFFFFF',
-          opacity: 1,
-          height: '100vh'
+          opacity: 1
         }}
         role="dialog"
         aria-modal="true"
@@ -137,6 +137,8 @@ const AccountDrawer: React.FC<AccountDrawerProps> = ({ isOpen, onClose, role }) 
       </aside>
     </div>
   );
+
+  return createPortal(drawerContent, document.body);
 };
 
 export default AccountDrawer;
