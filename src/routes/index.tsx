@@ -67,5 +67,3 @@ const AppRoutes: React.FC<AppRoutesProps> = ({ isAuthenticated }) => {
 };
 
 export default AppRoutes;
-
-

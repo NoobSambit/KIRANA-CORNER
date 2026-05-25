@@ -30,13 +30,29 @@ export const useCart = () => {
 
 export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [cart, setCart] = useState<CartItem[]>(() => {
-    const stored = localStorage.getItem('cart');
-    return stored ? JSON.parse(stored) : [];
+    try {
+      const stored = localStorage.getItem('cart');
+      if (!stored || stored.length > 100_000) {
+        localStorage.removeItem('cart');
+        return [];
+      }
+
+      const parsed = JSON.parse(stored);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+      console.warn('Ignoring invalid cart data from localStorage.', error);
+      localStorage.removeItem('cart');
+      return [];
+    }
   });
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cart));
+    try {
+      localStorage.setItem('cart', JSON.stringify(cart));
+    } catch (error) {
+      console.warn('Unable to persist cart to localStorage.', error);
+    }
   }, [cart]);
 
   const addToCart = (item: CartItem) => {
