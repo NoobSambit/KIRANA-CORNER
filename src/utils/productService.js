@@ -66,7 +66,7 @@ export const getShopProducts = (shopId, callback) => {
 };
 
 // Get products from nearby shops (within radius)
-export const getNearbyShopProducts = async (shops, userLocation, radiusKm = 3) => {
+export const getNearbyShopProducts = async (shops, userLocation, radiusKm = 5) => {
   try {
     console.log('🔍 Fetching products from nearby shops...');
     
@@ -79,27 +79,34 @@ export const getNearbyShopProducts = async (shops, userLocation, radiusKm = 3) =
       return [];
     }
 
+    const shopById = new Map(nearbyShops.map(shop => [shop.id, shop]));
     const allProducts = [];
+    const shopIds = nearbyShops.map(shop => shop.id);
     
-    // Fetch products from each nearby shop
-    for (const shop of nearbyShops) {
+    // Firestore "in" queries support up to 30 values, so query nearby shop IDs in chunks.
+    for (let i = 0; i < shopIds.length; i += 30) {
+      const shopIdChunk = shopIds.slice(i, i + 30);
       try {
         const productsSnapshot = await getDocs(
-          query(collection(db, 'shops', shop.id, 'catalog'))
+          query(collection(db, 'products'), where('shopId', 'in', shopIdChunk))
         );
         
-        const shopProducts = productsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          shopId: shop.id,
-          shopName: shop.name,
-          shopDistance: shop.distance,
-          ...doc.data()
-        }));
+        const shopProducts = productsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          const shop = shopById.get(data.shopId);
+          return {
+            id: doc.id,
+            shopId: data.shopId,
+            shopName: data.shopName || shop?.name,
+            shopDistance: shop?.distance,
+            ...data
+          };
+        });
         
         allProducts.push(...shopProducts);
-        console.log(`📦 Found ${shopProducts.length} products from ${shop.name}`);
+        console.log(`📦 Found ${shopProducts.length} products from ${shopIdChunk.length} nearby shops`);
       } catch (error) {
-        console.error(`❌ Error fetching products from shop ${shop.name}:`, error);
+        console.error('❌ Error fetching products for nearby shop chunk:', error);
       }
     }
     
@@ -114,9 +121,10 @@ export const getNearbyShopProducts = async (shops, userLocation, radiusKm = 3) =
 // Update product stock
 export const updateProductStock = async (shopId, productId, newStock) => {
   try {
-    const productRef = doc(db, 'shops', shopId, 'catalog', productId);
+    const productRef = doc(db, 'products', productId);
     await updateDoc(productRef, {
       stock: Math.max(0, newStock), // Ensure stock doesn't go below 0
+      inStock: Math.max(0, newStock) > 0,
       lastUpdated: new Date().toISOString()
     });
     return { success: true };
@@ -129,15 +137,16 @@ export const updateProductStock = async (shopId, productId, newStock) => {
 // Decrease product stock (for cart/buy actions)
 export const decreaseProductStock = async (shopId, productId, quantity = 1) => {
   try {
-    const productRef = doc(db, 'shops', shopId, 'catalog', productId);
-    const productDoc = await getDocs(query(collection(db, 'shops', shopId, 'catalog'), where('__name__', '==', productId)));
+    const productRef = doc(db, 'products', productId);
+    const productDoc = await getDoc(productRef);
     
-    if (!productDoc.empty) {
-      const currentStock = productDoc.docs[0].data().stock || 0;
+    if (productDoc.exists()) {
+      const currentStock = productDoc.data().stock || 0;
       const newStock = Math.max(0, currentStock - quantity);
       
       await updateDoc(productRef, {
         stock: newStock,
+        inStock: newStock > 0,
         lastUpdated: new Date().toISOString()
       });
       
@@ -176,24 +185,31 @@ export const decrementTopLevelProductStock = async (productId, quantity = 1) => 
 // Get products with real-time stock updates
 export const getProductsWithStockUpdates = (nearbyShops, callback) => {
   const unsubscribeFunctions = [];
+  const shopById = new Map(nearbyShops.map(shop => [shop.id, shop]));
+  const shopIds = nearbyShops.map(shop => shop.id);
   
-  nearbyShops.forEach(shop => {
-    const q = query(collection(db, 'shops', shop.id, 'catalog'));
+  for (let i = 0; i < shopIds.length; i += 30) {
+    const shopIdChunk = shopIds.slice(i, i + 30);
+    const q = query(collection(db, 'products'), where('shopId', 'in', shopIdChunk));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const products = snapshot.docs.map(doc => ({
-        id: doc.id,
-        shopId: shop.id,
-        shopName: shop.name,
-        shopDistance: shop.distance,
-        ...doc.data()
-      }));
+      const products = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const shop = shopById.get(data.shopId);
+        return {
+          id: doc.id,
+          shopId: data.shopId,
+          shopName: data.shopName || shop?.name,
+          shopDistance: shop?.distance,
+          ...data
+        };
+      });
       
       // Call the callback with updated products
-      callback(products, shop.id);
+      callback(products, shopIdChunk);
     });
     
     unsubscribeFunctions.push(unsubscribe);
-  });
+  }
   
   // Return cleanup function
   return () => {

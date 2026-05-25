@@ -10,8 +10,11 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "seed-shops": "node scripts/seedShops.js",
-    "seed-catalog": "node scripts/seedCatalog.js",
+    "seed": "node scripts/seedFreshData.js --write",
+    "seed:dry-run": "node scripts/seedFreshData.js --dry-run",
+    "seed:fresh": "node scripts/seedFreshData.js --write --fresh --confirm-delete",
+    "seed-shops": "node scripts/seedFreshData.js --write",
+    "seed-catalog": "node scripts/seedFreshData.js --write",
     "vercel-build": "vite build"
   },
   "dependencies": {

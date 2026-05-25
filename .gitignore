@@ -23,10 +23,15 @@ dist-ssr
 *.sln
 *.sw?
 
-# Firebase Admin SDK Service Account Keys and seeding scripts (contains secrets)
-scripts/**
-!scripts/README.md
+# Firebase Admin SDK Service Account Keys
 .env
 .env.local
 .env.*
 serviceAccount.json
+*firebase-adminsdk*.json
+*service-account*.json
+*serviceAccount*.json
+
+# Local seed scratch output
+scripts/output/
+scripts/*.local.*

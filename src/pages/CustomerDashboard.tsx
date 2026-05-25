@@ -39,7 +39,7 @@ const CustomerDashboard: React.FC = () => {
   }
   const [shops, setShops] = useState<MapShop[]>([]);
   const [nearbyShops, setNearbyShops] = useState<MapShop[]>([]);
-  interface Product { id: string; name: string; price: number; originalPrice?: number; image: string; rating: number; shop: string; inStock: boolean; category: string; shopName?: string; shopId?: string }
+  interface Product { id: string; name: string; price: number; originalPrice?: number; image: string; rating: number; shop: string; inStock: boolean; category: string; shopName?: string; shopId?: string; stock?: number; shopDistance?: number }
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [productsLoading, setProductsLoading] = useState(true);
@@ -49,6 +49,7 @@ const CustomerDashboard: React.FC = () => {
     lat: 22.5726,
     lng: 88.3639
   }), []);
+  const nearbyRadiusKm = 5;
   
   const location = useLocation();
   const navigate = useNavigate();
@@ -130,9 +131,9 @@ const CustomerDashboard: React.FC = () => {
       setShops(mapped);
 
       // Filter nearby shops using geo utils
-      const nearby = filterShopsByDistance(mapped as any, userLocation, 3) as unknown as MapShop[];
+      const nearby = filterShopsByDistance(mapped as any, userLocation, nearbyRadiusKm) as unknown as MapShop[];
       setNearbyShops(nearby);
-      console.log(`📍 Found ${nearby.length} shops within 3km radius`);
+      console.log(`📍 Found ${nearby.length} shops within ${nearbyRadiusKm}km radius`);
       console.log(`🏪 All shops:`, mapped.length);
       console.log(`🎯 Nearby shops:`, nearby.map(s => `${s.name} (${typeof s.distance === 'number' ? s.distance.toFixed(2) : '—'}km)`).slice(0, 5));
       
@@ -150,7 +151,7 @@ const CustomerDashboard: React.FC = () => {
       
       const loadProducts = async () => {
         try {
-          const nearbyProducts: any[] = await getNearbyShopProducts(shops as any[], userLocation, 3);
+          const nearbyProducts: any[] = await getNearbyShopProducts(shops as any[], userLocation, nearbyRadiusKm);
           const normalized: Product[] = (nearbyProducts || []).map((p: any) => ({
             id: String(p.id),
             name: String(p.name ?? ''),
@@ -162,7 +163,9 @@ const CustomerDashboard: React.FC = () => {
             inStock: Boolean(p.inStock ?? true),
             category: String(p.category ?? ''),
             shopName: p.shopName,
-            shopId: p.shopId
+            shopId: p.shopId,
+            stock: p.stock !== undefined ? Number(p.stock) : undefined,
+            shopDistance: p.shopDistance !== undefined ? Number(p.shopDistance) : undefined
           }));
           setProducts(normalized);
           console.log(`✅ Loaded ${nearbyProducts.length} products from nearby shops`);

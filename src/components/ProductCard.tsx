@@ -28,13 +28,21 @@ const ProductCard: React.FC<ProductCardProps> = ({
   shopDistance,
   onAddToCart
 }) => {
+  const [imageSrc, setImageSrc] = React.useState(image || fallbackProductImage(name));
+
+  React.useEffect(() => {
+    setImageSrc(image || fallbackProductImage(name));
+  }, [image, name]);
+
   return (
     <div className="group bg-white/80 dark:bg-white/5 backdrop-blur-md rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-white/20 dark:border-white/10 aspect-square flex flex-col">
       <div className="relative mb-4">
         <img
-          src={image}
+          src={imageSrc}
           alt={name}
           className="w-full h-32 object-cover rounded-xl bg-gradient-to-br from-orange-100 to-red-100"
+          loading="lazy"
+          onError={() => setImageSrc(fallbackProductImage(name))}
         />
         {(!inStock || (stock !== undefined && stock === 0)) && (
           <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
@@ -91,6 +99,12 @@ const ProductCard: React.FC<ProductCardProps> = ({
       </div>
     </div>
   );
+};
+
+const fallbackProductImage = (name: string): string => {
+  const label = (name || 'Product').slice(0, 24).replace(/[<>&'"]/g, '');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="#1f2937"/><rect x="36" y="48" width="328" height="304" rx="30" fill="#f97316" opacity=".92"/><circle cx="200" cy="145" r="54" fill="#fff7ed" opacity=".95"/><path d="M116 270c22-54 54-81 96-81s74 27 96 81" fill="none" stroke="#fff7ed" stroke-width="24" stroke-linecap="round"/><text x="200" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#fff7ed">${label}</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 };
 
 export default ProductCard;
