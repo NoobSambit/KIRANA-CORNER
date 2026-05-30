@@ -9,6 +9,7 @@ import { filterShopsByDistance } from '../utils/geoUtils.ts';
 import MapSection from '../components/MapSection';
 import FilterBar from '../components/FilterBar';
 import ProductGrid from '../components/ProductGrid';
+import RecipeAssistant from '../components/RecipeAssistant';
 import { useCart } from '../components/CartContext';
 import { useSearch } from '../components/SearchContext';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -423,6 +424,8 @@ const CustomerDashboard: React.FC = () => {
           ) : (
             <MapSection shops={nearbyShops as any[]} allShops={shops as any[]} userLocation={userLocation} />
           )}
+
+          <RecipeAssistant userLocation={userLocation} radiusKm={nearbyRadiusKm} />
 
           {/* Filter Bar */}
           <FilterBar

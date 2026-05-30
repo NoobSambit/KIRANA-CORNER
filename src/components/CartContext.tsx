@@ -57,11 +57,12 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const addToCart = (item: CartItem) => {
     setCart(prev => {
+      const incomingQuantity = Math.max(1, Number(item.quantity || 1));
       const existing = prev.find(i => i.id === item.id);
       if (existing) {
-        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i);
+        return prev.map(i => i.id === item.id ? { ...i, quantity: i.quantity + incomingQuantity } : i);
       }
-      return [...prev, { ...item, quantity: 1 }];
+      return [...prev, { ...item, quantity: incomingQuantity }];
     });
     setCartDrawerOpen(true);
   };

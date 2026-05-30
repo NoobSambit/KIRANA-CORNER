@@ -84,6 +84,14 @@ VITE_FIREBASE_STORAGE_BUCKET=...
 VITE_FIREBASE_MESSAGING_SENDER_ID=...
 VITE_FIREBASE_APP_ID=...
 ```
+For the customer recipe assistant, configure server-only variables in Vercel or `.env.local` for `vercel dev`:
+```bash
+GEMINI_API_KEY=...
+GEMINI_MODEL=gemini-2.5-flash-lite # optional
+FIREBASE_ADMIN_SERVICE_ACCOUNT_JSON='{"project_id":"...","client_email":"...","private_key":"..."}'
+# or use GOOGLE_APPLICATION_CREDENTIALS / FIREBASE_ADMIN_SERVICE_ACCOUNT_PATH locally
+```
+Do not put Gemini credentials in any `VITE_*` variable.
 3. Start dev servers
 ```bash
 # Frontend
