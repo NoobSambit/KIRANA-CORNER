@@ -1,12 +1,12 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { X, Store, Package, Settings, Calendar, LogOut } from 'lucide-react';
+import { X, Store, Package, Settings, LogOut, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
-// @ts-expect-error: JS module without types
+// @ts-expect-error: JS module
 import { auth } from '../firebase';
 import { signOut } from 'firebase/auth';
-// @ts-expect-error: JS module without types
+// @ts-expect-error: JS module
 import { getShopByOwnerId } from '../utils/shopService';
 
 interface AccountDrawerProps {
@@ -17,14 +17,15 @@ interface AccountDrawerProps {
 
 const AccountDrawer: React.FC<AccountDrawerProps> = ({ isOpen, onClose, role }) => {
   const navigate = useNavigate();
-  interface ShopInfo { name?: string; status?: string }
-  const [shop, setShop] = React.useState<ShopInfo | null>(null);
+  const [shop, setShop] = React.useState<{ name?: string; status?: string } | null>(null);
+  const [userEmail, setUserEmail] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) { setShop(null); return; }
+      if (!user) { setShop(null); setUserEmail(null); return; }
+      setUserEmail(user.email || null);
       const res = await getShopByOwnerId(user.uid);
-      setShop(res.success ? (res.data as ShopInfo) : null);
+      setShop(res.success ? res.data : null);
     });
     return () => unsub();
   }, []);
@@ -37,110 +38,107 @@ const AccountDrawer: React.FC<AccountDrawerProps> = ({ isOpen, onClose, role }) 
     }
   }, [isOpen]);
 
-  const go = (path: string) => {
-    onClose();
-    navigate(path);
-  };
-
-  const isShopOwner = role === 'shopowner';
+  const go = (path: string) => { onClose(); navigate(path); };
 
   if (!isOpen) return null;
 
-  const drawerContent = (
-    <div className="fixed inset-0 z-[100] flex justify-end pointer-events-auto">
-      {/* Overlay */}
-      <div
-        className="fixed inset-0 bg-black/30 transition-opacity duration-300 opacity-100 pointer-events-auto"
-        onClick={onClose}
-        aria-label="Close account panel"
-      />
-      {/* Drawer */}
+  return createPortal(
+    <div className="fixed inset-0 z-[200] flex justify-end">
+      <div className="fixed inset-0" style={{ background: 'rgba(0,0,0,0.35)', backdropFilter: 'blur(4px)' }}
+        onClick={onClose} />
       <aside
-        className="relative w-full sm:w-[380px] max-h-[85vh] mt-[15vh] shadow-2xl border-l border-slate-200 rounded-t-2xl transition-transform duration-300 ease-in-out flex flex-col translate-x-0 pointer-events-auto"
-        style={{ 
-          backgroundColor: '#FFFFFF',
-          background: '#FFFFFF',
-          opacity: 1
-        }}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Account panel"
+        className="relative w-full sm:w-[340px] max-h-full flex flex-col shadow-2xl animate-slide-in-right"
+        style={{ background: 'var(--bg-card)', borderLeft: '1px solid var(--border)' }}
+        role="dialog" aria-modal="true" aria-label="Account panel"
       >
-        <div className="absolute inset-0 bg-white -z-10" style={{ backgroundColor: '#FFFFFF' }} />
-        <button className="absolute top-4 right-4 p-2 rounded-full hover:bg-slate-200 z-10 transition-colors" onClick={onClose} aria-label="Close">
-          <X className="h-5 w-5 text-slate-700" />
-        </button>
-        <div className="p-6 border-b border-slate-200 bg-white" style={{ backgroundColor: '#FFFFFF' }}>
-          <h2 className="text-xl font-bold text-slate-900">{isShopOwner ? 'Shop Owner' : 'Customer'}</h2>
-          <p className="text-slate-600 text-sm mt-1">{isShopOwner ? 'Manage your store and settings' : 'Manage your account and orders'}</p>
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: '1px solid var(--border)' }}>
+          <div>
+            <h2 className="text-[16px] font-extrabold" style={{ color: 'var(--text-primary)' }}>
+              {role === 'shopowner' ? 'Shop Owner' : 'My Account'}
+            </h2>
+            {userEmail && <p className="text-[12px] font-medium mt-0.5 truncate" style={{ color: 'var(--text-muted)' }}>{userEmail}</p>}
+          </div>
+          <button className="p-2 rounded-full transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-elevated)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            onClick={onClose} aria-label="Close">
+            <X className="h-5 w-5" />
+          </button>
         </div>
 
-        <div className="p-4 space-y-3 bg-white flex-1 overflow-y-auto min-h-0" style={{ backgroundColor: '#FFFFFF' }}>
-          {isShopOwner ? (
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
+          {role === 'shopowner' ? (
             <>
-              <div className="bg-gradient-to-br from-emerald-50 to-green-50 rounded-2xl border border-emerald-200 p-4 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-slate-900 font-semibold text-lg">{shop?.name || 'Your Shop'}</div>
-                    <div className="text-xs text-slate-600 mt-1">Status: <span className={`font-semibold ${shop?.status==='open' ? 'text-emerald-600' : 'text-red-600'}`}>{shop?.status || '—'}</span></div>
+              {shop && (
+                <div className="rounded-xl p-4 mb-3"
+                  style={{ background: 'var(--success-bg)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[14px] font-extrabold" style={{ color: 'var(--text-primary)' }}>{shop.name || 'Your Shop'}</p>
+                      <p className="text-[12px] font-medium mt-0.5" style={{ color: 'var(--text-secondary)' }}>
+                        Status:{' '}
+                        <span className="font-bold" style={{ color: shop.status === 'open' ? 'var(--success)' : 'var(--error)' }}>
+                          {shop.status || '—'}
+                        </span>
+                      </p>
+                    </div>
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                      style={{ background: 'rgba(16,185,129,0.15)' }}>
+                      <Store className="h-5 w-5" style={{ color: 'var(--success)' }} />
+                    </div>
                   </div>
-                  <Store className="h-6 w-6 text-emerald-600" />
                 </div>
-              </div>
-
-              <button onClick={() => go('/dashboard')} className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-300 bg-white hover:bg-orange-50 hover:border-orange-300 transition-all group">
-                <Package className="h-5 w-5 text-orange-500 group-hover:text-orange-600" />
-                <span className="font-medium text-slate-800 group-hover:text-orange-700">Orders & Inventory</span>
-              </button>
-              <button onClick={() => go('/dashboard')} className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all group">
-                <Settings className="h-5 w-5 text-slate-600 group-hover:text-slate-700" />
-                <span className="font-medium text-slate-800 group-hover:text-slate-900">Store Settings</span>
-              </button>
-              <button onClick={() => go('/dashboard')} className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-300 bg-white hover:bg-indigo-50 hover:border-indigo-300 transition-all group">
-                <Calendar className="h-5 w-5 text-indigo-600 group-hover:text-indigo-700" />
-                <span className="font-medium text-slate-800 group-hover:text-indigo-700">Analytics (soon)</span>
-              </button>
-              <button onClick={() => go('/account')} className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all group">
-                <span className="font-medium text-slate-800 group-hover:text-slate-900">Customer Account</span>
-              </button>
+              )}
+              <DrawerItem icon={<Package />} label="Orders & Inventory" onClick={() => go('/dashboard')} />
+              <DrawerItem icon={<Settings />} label="Store Settings"    onClick={() => go('/dashboard')} />
+              <DrawerItem icon={<Settings />} label="Account Settings"  onClick={() => go('/account')} />
             </>
           ) : (
             <>
-              <button onClick={() => go('/orders')} className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-300 bg-white hover:bg-orange-50 hover:border-orange-300 transition-all group">
-                <Package className="h-5 w-5 text-orange-500 group-hover:text-orange-600" />
-                <span className="font-medium text-slate-800 group-hover:text-orange-700">My Orders</span>
-              </button>
-              <button onClick={() => go('/account')} className="w-full flex items-center gap-3 p-3 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 hover:border-slate-400 transition-all group">
-                <Settings className="h-5 w-5 text-slate-600 group-hover:text-slate-700" />
-                <span className="font-medium text-slate-800 group-hover:text-slate-900">Account Settings</span>
-              </button>
+              <DrawerItem icon={<Package />}  label="My Orders"        onClick={() => go('/orders')}  />
+              <DrawerItem icon={<Settings />} label="Account Settings" onClick={() => go('/account')} />
             </>
           )}
+
           <button
             onClick={async () => {
-              try {
-                await signOut(auth);
-              } catch {
-                // ignore signOut error and continue navigation
-              }
-              onClose();
-              navigate('/');
+              try { await signOut(auth); } catch { /* ignore */ }
+              onClose(); navigate('/');
             }}
-            className="w-full flex items-center gap-3 p-3 rounded-xl border border-red-300 bg-white hover:bg-red-50 hover:border-red-400 transition-all group"
-            aria-label="Log out"
-            title="Log out"
+            className="w-full flex items-center gap-3 p-3 rounded-xl transition-all"
+            style={{ background: 'var(--error-bg)', border: '1px solid rgba(239,68,68,0.2)' }}
           >
-            <LogOut className="h-5 w-5 text-red-600 group-hover:text-red-700" />
-            <span className="font-medium text-red-600 group-hover:text-red-700">Log out</span>
+            <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+              style={{ background: 'rgba(239,68,68,0.15)' }}>
+              <LogOut className="h-4 w-4" style={{ color: 'var(--error)' }} />
+            </span>
+            <span className="font-bold text-[13px]" style={{ color: 'var(--error)' }}>Log out</span>
           </button>
         </div>
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
-
-  return createPortal(drawerContent, document.body);
 };
 
+const DrawerItem: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
+  <button onClick={onClick}
+    className="w-full flex items-center gap-3 p-3 rounded-xl transition-all group"
+    style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+    onMouseEnter={(e) => { (e.currentTarget).style.borderColor = 'var(--border-brand)'; (e.currentTarget).style.background = 'var(--pastel-peach)'; }}
+    onMouseLeave={(e) => { (e.currentTarget).style.borderColor = 'var(--border)'; (e.currentTarget).style.background = 'var(--bg-elevated)'; }}
+  >
+    <span className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+      style={{ background: 'var(--bg-card)', color: 'var(--text-secondary)' }}>
+      {React.cloneElement(icon as React.ReactElement, { className: 'h-4 w-4' })}
+    </span>
+    <span className="font-bold text-[13px] flex-1 text-left" style={{ color: 'var(--text-primary)' }}>{label}</span>
+    <ChevronRight className="h-4 w-4" style={{ color: 'var(--text-muted)' }} />
+  </button>
+);
+
 export default AccountDrawer;
-
-

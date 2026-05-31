@@ -1,197 +1,279 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, User, ShoppingCart, Search, LogOut, Store } from 'lucide-react';
-import { motion } from 'framer-motion';
+import {
+  ShoppingCart, Search, User, Store, Home,
+  Package, MapPin, ChevronDown, X, Sun, Moon,
+} from 'lucide-react';
 import { useCart } from './CartContext';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-// @ts-expect-error: Importing from JS module without type declaration
+// @ts-expect-error: JS module
 import { auth } from '../firebase';
-// @ts-expect-error: Importing from JS module without type declaration
+// @ts-expect-error: JS module
 import { getUserData } from '../utils/orderUtils';
 import AccountDrawer from './AccountDrawer';
 import { useSearch } from './SearchContext';
+import { useTheme } from './ThemeContext';
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { cart, openCartDrawer } = useCart();
+  const { theme, toggleTheme } = useTheme();
   const [role, setRole] = React.useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [accountOpen, setAccountOpen] = React.useState(false);
-  const [isNavigating, setIsNavigating] = React.useState(false);
+  const [mobileSearchOpen, setMobileSearchOpen] = React.useState(false);
   const { searchQuery, setSearchQuery } = useSearch();
 
   React.useEffect(() => {
-    if (!auth) {
-      setRole(null);
-      setIsLoggedIn(false);
-      return;
-    }
-
+    if (!auth) { setRole(null); setIsLoggedIn(false); return; }
     const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        setRole(null);
-        setIsLoggedIn(false);
-        return;
-      }
+      if (!user) { setRole(null); setIsLoggedIn(false); return; }
       setIsLoggedIn(true);
       try {
         const res = await getUserData(user.uid);
         if (res.success) setRole(res.data.role || null);
         else setRole(null);
-      } catch {
-        setRole(null);
-      }
+      } catch { setRole(null); }
     });
     return () => unsub();
   }, []);
-  
-  const cartItemsCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
-  // Simple page detection to tailor visible actions
+  const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
   const isHome = location.pathname === '/';
+  const isDashboard = location.pathname === '/dashboard';
+  const isOrders = location.pathname === '/orders';
+  const isCustomer = role === 'customer';
+  const isShopOwner = role === 'shopowner';
+  const showBottomNav = isLoggedIn && isCustomer;
 
   return (
-    <motion.nav
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.4, ease: 'easeOut' }}
-      className="fixed top-0 left-0 w-full z-[100] h-20 bg-black/40 backdrop-blur-xl border-b border-white/10 transition-all duration-300"
-    >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full">
-        <div className="flex justify-between items-center h-full py-2 gap-4">
-          {/* Logo (Left) */}
+    <>
+      {/* ── Top Bar ─────────────────────────────────────────────── */}
+      <nav
+        className={`fixed top-0 left-0 w-full z-[100] h-16 ${isHome ? '' : 'nav-glass'}`}
+        style={isHome ? { background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' } : undefined}
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-8 h-full flex items-center justify-between gap-3">
+
+          {/* Logo */}
           <button
-            className="flex items-center space-x-2 cursor-pointer flex-shrink-0"
-            onClick={() => navigate('/')}
+            onClick={() => navigate(isLoggedIn && isCustomer ? '/dashboard' : '/')}
+            className="flex items-center gap-2 flex-shrink-0 tap-transparent"
             aria-label="KiranaConnect Home"
           >
-            <motion.div
-              initial={{ scale: 0.9, rotate: -8, opacity: 0 }}
-              animate={{ scale: 1, rotate: 0, opacity: 1 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.05 }}
-              className="flex-shrink-0"
-            >
-              <img 
-                src="/app%20logo.png" 
-                alt="KiranaConnect Logo"
-                className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 object-contain"
-                onError={(e) => {
-                  e.currentTarget.onerror = null;
-                  e.currentTarget.src = '/logo.svg';
-                }}
-              />
-            </motion.div>
-            <div className="flex items-center">
-              <span className="text-lg sm:text-xl md:text-2xl font-bold tracking-tight text-white whitespace-nowrap">
-                <span>Kirana</span>
-                <span className="text-[#ff6a00]">Connect</span>
-              </span>
-            </div>
+            <img
+              src="/app%20logo.png"
+              alt="KiranaConnect"
+              className="h-7 w-7 object-contain"
+              onError={(e) => { e.currentTarget.onerror = null; }}
+            />
+            <span className="text-[18px] font-extrabold tracking-tight whitespace-nowrap"
+              style={{ color: isHome ? '#fff' : 'var(--text-primary)' }}>
+              Kirana<span style={{ color: 'var(--brand)' }}>Connect</span>
+            </span>
           </button>
 
-          {/* Nav Links (Center) */}
-          {isHome && (
-            <div className="hidden lg:flex items-center justify-center space-x-8 flex-1 pl-12">
-              <a href="#" className="text-[#ff6a00] font-medium text-[13px] hover:text-[#ff6a00] transition-colors relative tracking-wide">
-                Home
-                <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-0.5 bg-[#ff6a00] rounded-full" />
-              </a>
-              <a href="#" className="text-slate-300 font-medium text-[13px] hover:text-white transition-colors tracking-wide">For Customers</a>
-              <a href="#" className="text-slate-300 font-medium text-[13px] hover:text-white transition-colors tracking-wide">For Shop Owners</a>
-              <a href="#" className="text-slate-300 font-medium text-[13px] hover:text-white transition-colors tracking-wide">About Us</a>
-              <a href="#" className="text-slate-300 font-medium text-[13px] hover:text-white transition-colors tracking-wide">Resources</a>
+          {/* Desktop search */}
+          {isCustomer && !isHome && (
+            <div className="hidden md:flex flex-1 max-w-lg items-center relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
+                style={{ color: 'var(--text-muted)' }} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products, shops…"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl text-[14px] font-medium outline-none transition-all"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                }}
+                onFocus={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-card)';
+                  e.currentTarget.style.borderColor = 'var(--brand)';
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.background = 'var(--bg-elevated)';
+                  e.currentTarget.style.borderColor = 'var(--border)';
+                }}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 transition-colors"
+                  style={{ color: 'var(--text-muted)' }} aria-label="Clear">
+                  <X className="h-4 w-4" />
+                </button>
+              )}
             </div>
           )}
 
-          {/* Actions (Right) */}
-          <div className="flex items-center justify-end space-x-3 lg:space-x-4 flex-shrink-0 w-auto">
-            {role === 'customer' && (
-              <div className="hidden md:flex items-center relative w-64">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search products..."
-                  className="w-full pl-11 pr-4 py-2 rounded-full bg-white/10 border border-white/20 text-slate-200 placeholder:text-slate-400 focus:outline-none focus:ring-1 focus:ring-[#ff6a00] shadow-md backdrop-blur-sm transition-all duration-300 text-sm"
-                />
-              </div>
+          {/* Location chip — desktop customer only */}
+          {isCustomer && !isHome && (
+            <button className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all flex-shrink-0 tap-transparent"
+              style={{
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-secondary)',
+              }}>
+              <MapPin className="h-3.5 w-3.5" style={{ color: 'var(--brand)' }} />
+              <span>Nearby</span>
+              <ChevronDown className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
+            </button>
+          )}
+
+          {/* Right actions */}
+          <div className="flex items-center gap-2 flex-shrink-0">
+
+            {/* Dark mode toggle — only on non-home pages */}
+            {!isHome && (
+              <button
+                onClick={toggleTheme}
+                className="flex items-center justify-center w-9 h-9 rounded-xl transition-all tap-transparent"
+                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+                aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+                title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              >
+                {theme === 'dark'
+                  ? <Sun className="h-4 w-4 text-amber-400" />
+                  : <Moon className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
+                }
+              </button>
             )}
-            
-            {!isHome && role !== 'shopowner' && (
+
+            {/* Mobile search toggle */}
+            {isCustomer && !isHome && (
+              <button
+                onClick={() => setMobileSearchOpen(!mobileSearchOpen)}
+                className="md:hidden flex items-center justify-center w-9 h-9 rounded-xl transition-all tap-transparent"
+                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
+                aria-label="Toggle search"
+              >
+                {mobileSearchOpen
+                  ? <X className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
+                  : <Search className="h-4 w-4" style={{ color: 'var(--text-secondary)' }} />
+                }
+              </button>
+            )}
+
+            {/* Cart */}
+            {isCustomer && !isHome && (
               <button
                 onClick={openCartDrawer}
-                className={`relative flex items-center justify-center sm:space-x-2 px-3 md:px-4 py-2 bg-[#ff6a00]/90 hover:bg-[#ff6a00] text-white rounded-full transition-all duration-300 shadow-md ${cartItemsCount > 0 ? 'animate-pulse' : ''}`}
-                aria-label="Cart"
+                className="relative flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-bold text-[13px] text-white transition-all tap-transparent"
+                style={{ background: 'var(--brand)', boxShadow: 'var(--shadow-brand)' }}
+                aria-label={`Open cart (${cartCount} items)`}
               >
-                <ShoppingCart className="h-4 w-4 sm:h-5 sm:w-5" />
-                <span className="hidden sm:inline text-sm font-medium">Cart</span>
-                {cartItemsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-5 w-5 flex items-center justify-center border border-white">
-                    {cartItemsCount}
+                <ShoppingCart className="h-4 w-4" />
+                <span className="hidden sm:inline">Cart</span>
+                {cartCount > 0 && (
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-extrabold rounded-full h-5 w-5 flex items-center justify-center border-2 border-white shadow-sm animate-bounce-sm">
+                    {cartCount > 9 ? '9+' : cartCount}
                   </span>
                 )}
               </button>
             )}
 
+            {/* Shop owner dashboard */}
+            {isShopOwner && (
+              <button onClick={() => navigate('/dashboard')}
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-bold text-[13px] transition-all"
+                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                <Store className="h-4 w-4" />
+                <span className="hidden sm:inline">My Store</span>
+              </button>
+            )}
+
+            {/* Account */}
             {isLoggedIn ? (
-              <>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate('/dashboard')}
-                  className="px-4 py-2 rounded-full border border-white/20 text-white/90 hover:text-white bg-white/10 hover:bg-white/20 transition-all duration-300 backdrop-blur-sm text-sm flex items-center gap-2"
-                >
-                  {role === 'shopowner' ? <Store className="h-4 w-4" /> : <User className="h-4 w-4" />}
-                  <span className="hidden sm:inline text-sm">Dashboard</span>
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={async () => {
-                    try {
-                      await signOut(auth);
-                      navigate('/');
-                    } catch (error) {
-                      console.error('Logout error:', error);
-                    }
-                  }}
-                  className="px-4 py-2 rounded-full border border-red-500/30 text-red-300 hover:text-red-100 bg-red-500/10 hover:bg-red-500/20 transition-all duration-300 backdrop-blur-sm text-sm flex items-center gap-2"
-                  title="Sign out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </motion.button>
-                <button
-                  onClick={() => setAccountOpen(true)}
-                  className="flex items-center justify-center w-9 h-9 rounded-full bg-white/10 border border-white/20 text-slate-200 hover:text-white hover:bg-white/20 transition-all duration-300 backdrop-blur-sm cursor-pointer"
-                  title="Account"
-                >
-                  <User className="h-4 w-4" />
-                </button>
-              </>
-            ) : (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  if (location.pathname === '/') {
-                    window.dispatchEvent(new CustomEvent('openLoginModal'));
-                  } else {
-                    navigate('/?login=true');
-                  }
-                }}
-                className="px-5 py-2 rounded-full border border-white/60 text-white hover:bg-white/10 transition-all duration-300 backdrop-blur-sm text-sm font-medium"
+              <button
+                onClick={() => setAccountOpen(true)}
+                className="flex items-center justify-center w-9 h-9 rounded-xl transition-all tap-transparent"
+                style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}
+                aria-label="Account"
               >
-                Login / Sign Up
-              </motion.button>
+                <User className="h-4 w-4" />
+              </button>
+            ) : (
+              <button
+                onClick={() => navigate('/login')}
+                className="px-4 py-2.5 rounded-xl font-bold text-[13px] text-white transition-all"
+                style={{ background: 'var(--brand)', boxShadow: 'var(--shadow-brand)' }}
+              >
+                Sign In
+              </button>
             )}
           </div>
         </div>
-      </div>
-      <AccountDrawer isOpen={accountOpen} onClose={() => setAccountOpen(false)} role={role as 'customer' | 'shopowner' | null} />
-    </motion.nav>
+
+        {/* Mobile search dropdown */}
+        {mobileSearchOpen && isCustomer && (
+          <div className="md:hidden px-4 pb-3 pt-2" style={{ background: 'var(--bg-card)', borderTop: '1px solid var(--border)' }}>
+            <div className="relative">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
+                style={{ color: 'var(--text-muted)' }} />
+              <input
+                autoFocus
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search products, shops…"
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl text-[14px] font-medium outline-none transition-all"
+                style={{
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
+                  color: 'var(--text-primary)',
+                }}
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2"
+                  style={{ color: 'var(--text-muted)' }}>
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* ── Mobile Bottom Nav (customer only) ──────────────────── */}
+      {showBottomNav && (
+        <nav className="fixed bottom-0 left-0 right-0 z-[90] pb-safe md:hidden nav-glass border-t"
+          style={{ borderColor: 'var(--border)' }}
+          aria-label="Mobile navigation">
+          <div className="grid grid-cols-4 h-14">
+            <BottomNavItem icon={<Home className="h-5 w-5" />}    label="Home"    active={isDashboard} onClick={() => navigate('/dashboard')} id="bnav-home" />
+            <BottomNavItem icon={<Search className="h-5 w-5" />}  label="Search"  active={false}       onClick={() => { navigate('/dashboard'); setMobileSearchOpen(true); }} id="bnav-search" />
+            <BottomNavItem icon={<Package className="h-5 w-5" />} label="Orders"  active={isOrders}    onClick={() => navigate('/orders')} id="bnav-orders" />
+            <BottomNavItem icon={<User className="h-5 w-5" />}    label="Account" active={accountOpen}  onClick={() => setAccountOpen(true)} id="bnav-account" />
+          </div>
+        </nav>
+      )}
+
+      <AccountDrawer
+        isOpen={accountOpen}
+        onClose={() => setAccountOpen(false)}
+        role={role as 'customer' | 'shopowner' | null}
+      />
+    </>
   );
 };
 
-export default Navbar; 
+const BottomNavItem: React.FC<{
+  icon: React.ReactNode; label: string; active: boolean; onClick: () => void; id: string;
+}> = ({ icon, label, active, onClick, id }) => (
+  <button
+    id={id}
+    onClick={onClick}
+    className="flex flex-col items-center justify-center gap-0.5 tap-transparent transition-colors"
+    style={{ color: active ? 'var(--brand)' : 'var(--text-muted)' }}
+    aria-label={label}
+  >
+    {icon}
+    <span className="text-[10px] font-bold">{label}</span>
+  </button>
+);
+
+export default Navbar;

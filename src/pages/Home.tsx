@@ -81,8 +81,25 @@ const Home: React.FC = () => {
     else navigate('/shop/new');
   };
 
+  // Force light mode on the landing page — it has its own visual design.
+  // Restore the user's saved theme preference when navigating away.
+  React.useEffect(() => {
+    const root = document.documentElement;
+    const wasDark = root.classList.contains('dark');
+    root.classList.remove('dark');
+    return () => {
+      // Restore whatever the user had saved
+      try {
+        const saved = localStorage.getItem('kirana-theme');
+        if (saved === 'dark' || wasDark) {
+          root.classList.add('dark');
+        }
+      } catch { /* ignore */ }
+    };
+  }, []);
+
   return (
-    <div className="min-h-screen bg-[#0B0F17] text-[#F5F5F5] overflow-x-hidden">
+    <div className="min-h-screen bg-[#111] text-white overflow-x-hidden font-sans">
       {/* 1. Hero Section */}
       <section className="relative h-screen min-h-screen flex flex-col justify-center overflow-hidden py-12 md:py-20">
         {/* Background Image Container */}
@@ -92,8 +109,10 @@ const Home: React.FC = () => {
             alt="Traditional Indian Shopkeeper Store" 
             className="w-full h-full object-cover object-center" 
           />
-          {/* Very subtle gradient so text on left is readable without destroying the original image lighting */}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/10 to-transparent" />
+          {/* Dark overlay so white text is readable over the image */}
+          <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/20" />
+          {/* Bottom fade to blend into dark bg below */}
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-[#111]" />
         </div>
 
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
@@ -105,7 +124,7 @@ const Home: React.FC = () => {
                 initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
-                className="text-4xl sm:text-5xl md:text-6xl xl:text-[4.5rem] font-bold leading-[1.1] text-white font-sans tracking-tight"
+                className="text-4xl sm:text-5xl md:text-6xl xl:text-[4.5rem] font-extrabold leading-[1.1] text-white tracking-tight"
               >
                 Your Neighborhood <br />
                 Store. <span className="text-[#ff6a00]">Now Online.</span>
@@ -115,7 +134,7 @@ const Home: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="text-slate-300 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium"
+                className="text-white/80 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium"
               >
                 Empowering local kirana shops to compete in the age of quick commerce. Place orders with the neighborhood stores you trust.
               </motion.p>
@@ -125,13 +144,13 @@ const Home: React.FC = () => {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="flex flex-col sm:flex-row gap-5 justify-center lg:justify-start pt-2"
+                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-2"
               >
                 <motion.button
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => goSignup('customer')}
-                  className="px-8 py-3.5 bg-gradient-to-r from-[#ff6a00] to-[#ff5100] text-white font-bold rounded-[14px] shadow-lg hover:shadow-orange-500/25 transition-all duration-300 flex items-center justify-center gap-2 text-base"
+                  className="px-8 py-3.5 bg-orange-500 text-white font-bold rounded-[14px] shadow-[0_4px_14px_rgba(255,106,0,0.3)] hover:shadow-[0_6px_20px_rgba(255,106,0,0.4)] transition-all duration-300 flex items-center justify-center gap-2 text-base"
                 >
                   Shop Nearby
                   <ArrowRight className="h-5 w-5" />
@@ -140,7 +159,7 @@ const Home: React.FC = () => {
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handlePrimaryCTA}
-                  className="px-8 py-3.5 bg-transparent border border-white/60 text-white font-bold rounded-[14px] hover:bg-white/10 hover:border-white transition-all duration-300 flex items-center justify-center gap-2 text-base"
+                  className="px-8 py-3.5 bg-white/10 border border-white/30 text-white font-bold rounded-[14px] hover:bg-white/20 hover:border-white/50 backdrop-blur-sm shadow-sm transition-all duration-300 flex items-center justify-center gap-2 text-base"
                 >
                   Register Your Shop
                 </motion.button>
@@ -151,24 +170,24 @@ const Home: React.FC = () => {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
-                className="pt-10 flex flex-wrap justify-center lg:justify-start gap-8 lg:gap-12 text-sm sm:text-base text-slate-200 font-medium"
+                className="pt-10 flex flex-wrap justify-center lg:justify-start gap-8 lg:gap-12 text-sm sm:text-base text-white/90 font-semibold"
               >
                 <div className="flex items-center gap-4 group cursor-default">
-                  <div className="w-14 h-14 rounded-2xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3 group-hover:bg-orange-500/20 group-hover:border-orange-500/40">
-                    <Store className="w-7 h-7 text-orange-500" />
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3 group-hover:bg-white/20">
+                    <Store className="w-7 h-7 text-orange-400" />
                   </div>
                   <span className="leading-tight group-hover:text-white transition-colors duration-300">Local Stores<br/>You Trust</span>
                 </div>
 
                 <div className="flex items-center gap-4 group cursor-default">
-                  <div className="w-14 h-14 rounded-2xl bg-emerald-400/10 border border-emerald-400/20 flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 group-hover:bg-emerald-400/20 group-hover:border-emerald-400/40">
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 group-hover:bg-white/20">
                     <Truck className="w-7 h-7 text-emerald-400" />
                   </div>
                   <span className="leading-tight group-hover:text-white transition-colors duration-300">Fast & Easy<br/>Delivery</span>
                 </div>
 
                 <div className="flex items-center gap-4 group cursor-default">
-                  <div className="w-14 h-14 rounded-2xl bg-cyan-400/10 border border-cyan-400/20 flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3 group-hover:bg-cyan-400/20 group-hover:border-cyan-400/40">
+                  <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3 group-hover:bg-white/20">
                     <Shield className="w-7 h-7 text-cyan-400" />
                   </div>
                   <span className="leading-tight group-hover:text-white transition-colors duration-300">Secure & Safe<br/>Payments</span>
@@ -334,15 +353,12 @@ const Home: React.FC = () => {
       </section>
 
       {/* 2. What's Happening to Our Local Stores? (VS Section) */}
-      <section className="py-8 relative overflow-hidden bg-[#0A0A0A]">
-        {/* Subtle orange glow in the background as in the mockup */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-[1200px] h-[400px] bg-orange-500/10 blur-[150px] pointer-events-none" />
-
+      <section className="py-6 relative overflow-hidden bg-[#111]">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex justify-center">
-          <div className="flex flex-col lg:flex-row w-full rounded-[24px] overflow-hidden border border-white/10 bg-[#111111] shadow-2xl items-stretch">
+          <div className="flex flex-col lg:flex-row w-full rounded-[24px] overflow-hidden border border-white/10 bg-[#1a1a1f] shadow-xl items-stretch">
             {/* Left Column (Details) */}
             <div className="p-8 md:p-12 lg:w-[42%] flex flex-col justify-center space-y-10 shrink-0">
-              <h2 className="text-[28px] md:text-[32px] font-bold font-sans leading-tight text-white tracking-tight">
+              <h2 className="text-[28px] md:text-[32px] font-extrabold leading-tight text-white tracking-tight">
                 What's Happening to <br />
                 Our Local Stores?
               </h2>
@@ -353,10 +369,10 @@ const Home: React.FC = () => {
                   { icon: Frown, text: 'Small stores struggling\nto survive' }
                 ].map((item, idx) => (
                   <div key={idx} className="flex gap-4 items-start">
-                    <div className="w-10 h-10 shrink-0 rounded-[12px] border border-white/10 flex items-center justify-center text-white/80 bg-white/[0.02]">
-                      <item.icon className="h-5 w-5 stroke-[1.5]" />
+                    <div className="w-10 h-10 shrink-0 rounded-[12px] border border-white/10 flex items-center justify-center text-white/70 bg-white/5 shadow-sm">
+                      <item.icon className="h-5 w-5 stroke-[2]" />
                     </div>
-                    <p className="text-white/80 text-[13px] leading-tight whitespace-pre-line font-medium mt-1">
+                    <p className="text-white/70 text-[14px] leading-tight whitespace-pre-line font-medium mt-1">
                       {item.text}
                     </p>
                   </div>
@@ -372,12 +388,12 @@ const Home: React.FC = () => {
                 className="w-full h-full object-cover object-center" 
               />
               
-              {/* Overlaid Texts (No background pills, pure text to match mockup) */}
-              <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end">
+              {/* Overlaid Texts */}
+              <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-end bg-gradient-to-t from-black/60 to-transparent">
                 <div className="grid grid-cols-2 gap-4 items-end h-full relative">
                   {/* Warehouse text */}
-                  <div className="text-left mb-1 opacity-90">
-                    <h4 className="text-white font-bold text-[13px] sm:text-sm leading-snug">
+                  <div className="text-left mb-1 opacity-100">
+                    <h4 className="text-white font-bold text-[13px] sm:text-sm leading-snug drop-shadow-md">
                       Big warehouses.<br/>
                       Big budgets.<br/>
                       Bigger control.
@@ -385,8 +401,8 @@ const Home: React.FC = () => {
                   </div>
                   
                   {/* Shopkeeper text */}
-                  <div className="text-left mb-1 pl-6 opacity-90">
-                    <h4 className="text-white font-bold text-[13px] sm:text-sm leading-snug">
+                  <div className="text-left mb-1 pl-6 opacity-100">
+                    <h4 className="text-white font-bold text-[13px] sm:text-sm leading-snug drop-shadow-md">
                       Small stores.<br/>
                       Big hearts.<br/>
                       Limited reach.
@@ -395,10 +411,10 @@ const Home: React.FC = () => {
                 </div>
               </div>
 
-              {/* Floating VS Badge in the center (dark circle with faint outline) */}
+              {/* Floating VS Badge in the center */}
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10">
-                <div className="w-10 h-10 rounded-full bg-[#111] border-[1.5px] border-amber-600/50 flex items-center justify-center shadow-2xl">
-                  <span className="text-white font-bold text-[11px] tracking-wider">VS</span>
+                <div className="w-12 h-12 rounded-full bg-white border-2 border-gray-100 flex items-center justify-center shadow-lg">
+                  <span className="text-gray-900 font-extrabold text-[13px] tracking-wider">VS</span>
                 </div>
               </div>
             </div>
@@ -406,86 +422,79 @@ const Home: React.FC = () => {
         </div>
       </section>
 
-
       {/* === UNIFIED PREMIUM MID SECTION === */}
-      <section className="relative min-h-screen flex flex-col justify-center py-16 overflow-hidden border-y border-white/10">
-        {/* Immersive Background Image (Brighter, Unblurred) */}
+      <section className="relative min-h-screen flex flex-col justify-center py-20 overflow-hidden">
+        {/* Background image */}
         <div className="absolute inset-0 z-0">
-          <img 
-            src="/mid_section.png" 
-            alt="Kirana Mid Section Background" 
-            className="w-full h-full object-cover object-center" 
-            onError={(e) => {
-              e.currentTarget.onerror = null;
-              e.currentTarget.src = '/scenery%20kirana.png'; 
-            }}
-          />
-          {/* Very light overlay to let the image shine while maintaining text contrast */}
-          <div className="absolute inset-0 bg-black/40" />
+          <img src="/mid_section.png" alt="" className="w-full h-full object-cover" />
+          <div className="absolute inset-0 bg-black/70" />
+          {/* Top fade — blends from VS section's #111 */}
+          <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-[#111] to-transparent z-[1]" />
+          {/* Bottom fade — blends into footer */}
+          <div className="absolute bottom-0 left-0 right-0 h-40 bg-gradient-to-t from-[#111] to-transparent z-[1]" />
         </div>
-
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full flex flex-col items-center">
           
           {/* Mid Section Header */}
-          <div className="text-center mb-10 mt-4">
-            <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold font-display leading-tight text-white tracking-tight drop-shadow-xl">
-              Introducing Kirana<span className="text-orange-500 drop-shadow-[0_0_15px_rgba(255,106,0,0.5)]">Connect</span>
+          <div className="text-center mb-16 mt-4">
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-extrabold leading-tight text-white tracking-tight">
+              Introducing Kirana<span className="text-orange-500">Connect</span>
             </h2>
           </div>
 
-          {/* Premium Glassmorphism Bento Grid (Center Aligned, Transparent) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full mb-16">
+          {/* Premium Glassmorphism Bento Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full mb-20">
             {[
               {
                 title: 'Map-based Discovery',
                 desc: 'Find trusted kirana stores near you in one tap.',
                 icon: MapPin,
                 color: 'text-orange-500',
-                borderHover: 'hover:border-orange-500/50 hover:shadow-[0_0_30px_rgba(255,106,0,0.2)]'
+                bg: 'bg-orange-500/10 border-orange-500/20'
               },
               {
                 title: 'Real-time Inventory',
                 desc: 'Live stock updates for smarter shopping.',
                 icon: ShoppingBag,
-                color: 'text-emerald-400',
-                borderHover: 'hover:border-emerald-500/50 hover:shadow-[0_0_30px_rgba(16,185,129,0.2)]'
+                color: 'text-emerald-500',
+                bg: 'bg-emerald-500/10 border-emerald-500/20'
               },
               {
                 title: 'Easy Ordering',
                 desc: 'Add to cart and order in just a few taps.',
                 icon: ShoppingCart,
                 color: 'text-orange-500',
-                borderHover: 'hover:border-orange-500/50 hover:shadow-[0_0_30px_rgba(255,106,0,0.2)]'
+                bg: 'bg-orange-500/10 border-orange-500/20'
               },
               {
                 title: 'Shop Dashboard',
                 desc: 'Manage your store, inventory & orders effortlessly.',
                 icon: LineChart,
-                color: 'text-emerald-400',
-                borderHover: 'hover:border-emerald-500/50 hover:shadow-[0_0_30px_rgba(16,185,129,0.2)]'
+                color: 'text-emerald-500',
+                bg: 'bg-emerald-500/10 border-emerald-500/20'
               }
             ].map((card, idx) => (
               <motion.div
                 key={idx}
                 whileHover={{ y: -6 }}
-                className={`bg-[#0a0a0a]/30 backdrop-blur-md rounded-[24px] p-8 border border-white/10 transition-all duration-300 flex flex-col items-center text-center shadow-2xl ${card.borderHover}`}
+                className="bg-white/5 rounded-[24px] p-8 border border-white/10 transition-all duration-300 flex flex-col items-center text-center hover:bg-white/10 hover:border-white/20"
               >
-                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 bg-black/20 shadow-inner border border-white/10 ${card.color} drop-shadow-md`}>
+                <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-6 border ${card.bg} ${card.color}`}>
                   <card.icon className="h-7 w-7" />
                 </div>
-                <h3 className="text-xl font-bold text-white mb-3 font-display tracking-wide">{card.title}</h3>
-                <p className="text-slate-300 text-sm leading-relaxed">{card.desc}</p>
+                <h3 className="text-xl font-bold text-white mb-3 tracking-tight">{card.title}</h3>
+                <p className="text-white/60 text-[15px] font-medium leading-relaxed">{card.desc}</p>
               </motion.div>
             ))}
           </div>
 
-          {/* How It Works (Mockup Accurate - Scaled Up) */}
+          {/* How It Works */}
           <div className="w-full max-w-6xl mt-8">
             {/* Title with lines */}
             <div className="flex items-center justify-center gap-6 mb-16">
-              <div className="h-[2px] w-24 sm:w-48 bg-gradient-to-r from-transparent to-orange-500/50" />
-              <h3 className="text-4xl font-bold text-white font-display whitespace-nowrap">How It Works</h3>
-              <div className="h-[2px] w-24 sm:w-48 bg-gradient-to-l from-transparent to-emerald-500/50" />
+              <div className="h-[1px] w-24 sm:w-48 bg-gradient-to-r from-transparent to-white/20" />
+              <h3 className="text-3xl font-extrabold text-white whitespace-nowrap tracking-tight">How It Works</h3>
+              <div className="h-[1px] w-24 sm:w-48 bg-gradient-to-l from-transparent to-white/20" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-12 relative">
@@ -494,60 +503,60 @@ const Home: React.FC = () => {
               <div className="flex flex-col w-full">
                 <div className="flex items-center justify-center gap-3 mb-12">
                   <User className="text-orange-500 w-7 h-7" />
-                  <h4 className="text-2xl font-extrabold text-orange-500 font-display">For Customers</h4>
+                  <h4 className="text-2xl font-extrabold text-white">For Customers</h4>
                 </div>
                 
                 <div className="relative flex justify-between items-start w-full px-4 sm:px-8">
                   {/* Dashed Connecting Line */}
-                  <div className="absolute top-12 left-[15%] right-[15%] h-[2px] border-t-2 border-dashed border-orange-500/30 z-0" />
+                  <div className="absolute top-12 left-[15%] right-[15%] h-[2px] border-t-2 border-dashed border-white/15 z-0" />
                   
                   {[
-                    { step: '1', title: 'Discover', sub: 'nearby shops', icon: Store },
-                    { step: '2', title: 'Browse', sub: 'products', icon: Package },
-                    { step: '3', title: 'Place', sub: 'order', icon: ShoppingBag }
+                    { step: '1', title: 'Discover', sub: 'nearby shops', icon: Store, color: 'text-orange-500', border: 'border-orange-500/30' },
+                    { step: '2', title: 'Browse', sub: 'products', icon: Package, color: 'text-orange-500', border: 'border-orange-500/30' },
+                    { step: '3', title: 'Place', sub: 'order', icon: ShoppingBag, color: 'text-orange-500', border: 'border-orange-500/30' }
                   ].map((item, idx) => (
                     <div key={idx} className="flex flex-col items-center z-10 w-28">
-                      <div className="w-24 h-24 rounded-full border border-orange-500 bg-[#1A1A1A] flex items-center justify-center text-orange-500 shadow-[0_0_20px_rgba(255,106,0,0.15)] mb-4">
+                      <div className={`w-24 h-24 rounded-full border bg-white/5 flex items-center justify-center shadow-sm mb-4 ${item.border} ${item.color}`}>
                         <item.icon className="w-10 h-10" />
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-orange-500 text-black font-black text-sm flex items-center justify-center -mt-8 mb-4 border-[3px] border-[#1A1A1A] z-20">
+                      <div className="w-8 h-8 rounded-full bg-orange-500 text-white font-bold text-sm flex items-center justify-center -mt-8 mb-4 border-[3px] border-[#111] z-20">
                         {item.step}
                       </div>
-                      <h5 className="font-bold text-white text-base mb-1">{item.title}</h5>
-                      <span className="text-slate-400 text-sm text-center">{item.sub}</span>
+                      <h5 className="font-bold text-white text-[15px] mb-1">{item.title}</h5>
+                      <span className="text-white/50 font-medium text-[13px] text-center">{item.sub}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
               {/* Center Divider Line (Desktop only) */}
-              <div className="hidden lg:block absolute left-1/2 top-[35%] bottom-[5%] w-[2px] bg-white/5 -translate-x-1/2" />
+              <div className="hidden lg:block absolute left-1/2 top-[10%] bottom-[10%] w-[1px] bg-white/10 -translate-x-1/2" />
 
               {/* For Shop Owners */}
               <div className="flex flex-col w-full">
                 <div className="flex items-center justify-center gap-3 mb-12">
-                  <Store className="text-emerald-400 w-7 h-7" />
-                  <h4 className="text-2xl font-extrabold text-emerald-400 font-display">For Shop Owners</h4>
+                  <Store className="text-emerald-500 w-7 h-7" />
+                  <h4 className="text-2xl font-extrabold text-white">For Shop Owners</h4>
                 </div>
                 
                 <div className="relative flex justify-between items-start w-full px-4 sm:px-8">
                   {/* Dashed Connecting Line */}
-                  <div className="absolute top-12 left-[15%] right-[15%] h-[2px] border-t-2 border-dashed border-emerald-500/30 z-0" />
+                  <div className="absolute top-12 left-[15%] right-[15%] h-[2px] border-t-2 border-dashed border-white/15 z-0" />
                   
                   {[
-                    { step: '1', title: 'Register', sub: 'your shop', icon: ClipboardList },
-                    { step: '2', title: 'Add', sub: 'inventory', icon: Package },
-                    { step: '3', title: 'Receive', sub: 'orders', icon: Bell }
+                    { step: '1', title: 'Register', sub: 'your shop', icon: ClipboardList, color: 'text-emerald-500', border: 'border-emerald-500/30' },
+                    { step: '2', title: 'Add', sub: 'inventory', icon: Package, color: 'text-emerald-500', border: 'border-emerald-500/30' },
+                    { step: '3', title: 'Receive', sub: 'orders', icon: Bell, color: 'text-emerald-500', border: 'border-emerald-500/30' }
                   ].map((item, idx) => (
                     <div key={idx} className="flex flex-col items-center z-10 w-28">
-                      <div className="w-24 h-24 rounded-full border border-emerald-400 bg-[#1A1A1A] flex items-center justify-center text-emerald-400 shadow-[0_0_20px_rgba(16,185,129,0.15)] mb-4">
+                      <div className={`w-24 h-24 rounded-full border bg-white/5 flex items-center justify-center shadow-sm mb-4 ${item.border} ${item.color}`}>
                         <item.icon className="w-10 h-10" />
                       </div>
-                      <div className="w-8 h-8 rounded-full bg-emerald-400 text-black font-black text-sm flex items-center justify-center -mt-8 mb-4 border-[3px] border-[#1A1A1A] z-20">
+                      <div className="w-8 h-8 rounded-full bg-emerald-500 text-white font-bold text-sm flex items-center justify-center -mt-8 mb-4 border-[3px] border-[#111] z-20">
                         {item.step}
                       </div>
-                      <h5 className="font-bold text-white text-base mb-1">{item.title}</h5>
-                      <span className="text-slate-400 text-sm text-center">{item.sub}</span>
+                      <h5 className="font-bold text-white text-[15px] mb-1">{item.title}</h5>
+                      <span className="text-white/50 font-medium text-[13px] text-center">{item.sub}</span>
                     </div>
                   ))}
                 </div>
@@ -562,7 +571,7 @@ const Home: React.FC = () => {
 
 
       {/* 9. Premium Footer */}
-      <footer className="relative text-white pt-24 pb-12 overflow-hidden border-t border-white/10 mt-12">
+      <footer className="relative text-white pt-24 pb-12 overflow-hidden">
         {/* Background Image Container */}
         <div className="absolute inset-0 z-0">
           <img 
@@ -572,6 +581,8 @@ const Home: React.FC = () => {
           />
           {/* Subtle overlay to let the scenery shine through while keeping text readable */}
           <div className="absolute inset-0 bg-black/40" />
+          {/* Top fade — blends from mid section */}
+          <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-[#111] to-transparent z-[1]" />
         </div>
 
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10">

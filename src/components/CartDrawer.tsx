@@ -1,304 +1,266 @@
 import React, { useState } from 'react';
 import { useCart } from './CartContext';
-import { Minus, Plus, X, Clock, MapPin, Truck, Shield, FileText, Info } from 'lucide-react';
+import {
+  Minus, Plus, X, Clock, MapPin, Truck, Shield, FileText,
+  ShoppingBag, ChevronRight, ArrowRight,
+} from 'lucide-react';
 import AddressSelector from './AddressSelector';
 import { onAuthStateChanged } from 'firebase/auth';
 // @ts-expect-error: JS module
 import { auth, db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { decrementTopLevelProductStock } from '../utils/productService';
+import { fallbackProductImage, resolveProductImage } from '../utils/productImages';
 
 const CartDrawer: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
   const { cart, updateQuantity, removeFromCart, clearCart } = useCart();
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryCharge = subtotal > 0 ? 30 : 0;
-  const handlingCharge = subtotal > 0 ? 4 : 0;
-  const total = subtotal + deliveryCharge + handlingCharge;
-  const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const savings = cart.reduce((sum, item) => sum + (item.originalPrice ? (item.originalPrice - item.price) * item.quantity : 0), 0);
 
-  // Address selection state
+  const subtotal       = cart.reduce((s, i) => s + i.price * i.quantity, 0);
+  const savings        = cart.reduce((s, i) => s + ((i.originalPrice ?? 0) > i.price ? (i.originalPrice! - i.price) * i.quantity : 0), 0);
+  const deliveryCharge = subtotal > 0 ? 30 : 0;
+  const handlingCharge = subtotal > 0 ? 4  : 0;
+  const total          = subtotal + deliveryCharge + handlingCharge;
+  const totalItems     = cart.reduce((s, i) => s + i.quantity, 0);
+
   const [addressSelectorOpen, setAddressSelectorOpen] = useState(false);
   const [selectedAddress, setSelectedAddress] = useState<{ id: string; label: string; address: string } | null>(null);
+  const [placing, setPlacing] = useState(false);
 
-  const handleQuantityChange = (id: string, newQuantity: number) => {
-    if (newQuantity <= 0) {
-      removeFromCart(id);
-    } else {
-      updateQuantity(id, newQuantity);
-    }
-  };
-
-  const handleAddressSelect = (address: { id: string; label: string; address: string }) => {
-    setSelectedAddress(address);
-    setAddressSelectorOpen(false);
+  const handleQtyChange = (id: string, qty: number) => {
+    if (qty <= 0) removeFromCart(id);
+    else updateQuantity(id, qty);
   };
 
   const placeOrderMockRazorpay = async () => {
-    if (cart.length === 0) return;
-    // For now, we simulate successful payment and create Firestore order
+    if (!cart.length) return;
+    setPlacing(true);
     let userId: string | null = null;
-    await new Promise<void>((resolve) => {
-      const unsub = onAuthStateChanged(auth, (u) => {
-        userId = u?.uid || null;
-        unsub();
-        resolve();
-      });
+    await new Promise<void>((res) => {
+      const u = onAuthStateChanged(auth, (usr) => { userId = usr?.uid ?? null; u(); res(); });
     });
-    const items = cart.map((i) => ({
-      id: i.id,
-      name: i.name,
-      price: i.price,
-      quantity: i.quantity,
-      shopId: i.shopId || i.shop,
-    }));
-    const firstShopId = cart[0]?.shopId || cart[0]?.shop; // alignment fallback
-    const orderPayload = {
-      customerId: userId || 'guest',
-      customerName: 'Customer',
-      shopId: firstShopId,
-      shopName: cart[0]?.shopName || cart[0]?.shop || 'Shop',
-      items,
-      totalAmount: total,
-      address: selectedAddress || null,
-      payment: {
-        provider: 'razorpay',
-        status: 'captured',
-        mode: 'TEST',
-      },
-      orderStatus: 'Pending',
-      orderTime: new Date().toISOString(),
-    };
+    const items = cart.map((i) => ({ id: i.id, name: i.name, price: i.price, quantity: i.quantity, shopId: i.shopId || i.shop }));
     try {
-      await addDoc(collection(db, 'orders'), orderPayload);
-      // Update stock per item
-      for (const item of cart) {
-        try {
-          await decrementTopLevelProductStock(item.id, item.quantity);
-        } catch {
-          // continue
-        }
+      await addDoc(collection(db, 'orders'), {
+        customerId: userId || 'guest', customerName: 'Customer',
+        shopId: cart[0]?.shopId || cart[0]?.shop, shopName: cart[0]?.shopName || cart[0]?.shop || 'Shop',
+        items, totalAmount: total, address: selectedAddress || null,
+        payment: { provider: 'razorpay', status: 'captured', mode: 'TEST' },
+        orderStatus: 'Pending', orderTime: new Date().toISOString(),
+      });
+      for (const i of cart) {
+        try { await decrementTopLevelProductStock(i.id, i.quantity); } catch { /* continue */ }
       }
-      // Clear cart and close
       clearCart();
       alert('Payment successful! Order placed.');
     } catch (e) {
-      console.error('Failed to create order', e);
+      console.error('Order failed', e);
       alert('Failed to place order');
+    } finally {
+      setPlacing(false);
     }
   };
 
   return (
-    <div className={`fixed inset-0 z-50 flex justify-end transition-all duration-300 ${isOpen ? '' : 'pointer-events-none'}`}>
+    <div className={`fixed inset-0 z-[150] flex justify-end transition-all duration-300 ${isOpen ? '' : 'pointer-events-none'}`}>
       {/* Overlay */}
       <div
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+        className={`fixed inset-0 transition-opacity duration-300 ${isOpen ? 'opacity-100' : 'opacity-0'}`}
+        style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
         onClick={onClose}
-        aria-label="Close cart drawer"
       />
-      {/* Dynamic Responsive Drawer */}
+
+      {/* Drawer */}
       <div
-        className={`relative w-[280px] sm:w-[400px] md:w-[450px] lg:w-[500px] max-w-full h-full bg-[#0B0F17] shadow-2xl transition-transform duration-300 ease-in-out flex flex-col border-l border-[#2A2F38]
-          ${isOpen ? 'translate-x-0' : 'translate-x-full'}
-        `}
+        className={`relative w-full sm:w-[420px] max-w-full h-full flex flex-col shadow-2xl transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : 'translate-x-full'}`}
+        style={{ background: 'var(--bg-base)' }}
       >
-        {/* Dynamic Header */}
-        <div className="flex items-center justify-between p-3 sm:p-4 md:p-6 border-b border-[#2A2F38] bg-[#0B0F17]">
-          <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-[#F5F5F5]">My Cart</h2>
-          <button
-            className="p-1.5 sm:p-2 md:p-3 rounded-full hover:bg-[#161B22] transition-all text-[#CCCCCC] hover:text-[#F5F5F5]"
-            onClick={onClose}
-            aria-label="Close"
-          >
-            <X className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6" />
+        {/* Header */}
+        <div className="flex items-center justify-between px-5 py-4"
+          style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border)' }}>
+          <div>
+            <h2 className="text-xl font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>My Cart</h2>
+            {totalItems > 0 && <p className="text-[12px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{totalItems} item{totalItems !== 1 ? 's' : ''}</p>}
+          </div>
+          <button onClick={onClose} className="p-2 rounded-full transition-colors"
+            style={{ color: 'var(--text-muted)' }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-elevated)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            aria-label="Close cart">
+            <X className="h-5 w-5" />
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {/* Dynamic Savings Banner */}
-          {savings > 0 && (
-            <div className="mx-2 sm:mx-4 md:mx-6 mt-2 sm:mt-3 md:mt-4 bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-lg sm:rounded-xl md:rounded-2xl p-2 sm:p-3 md:p-4 border border-green-500/30">
-              <div className="flex justify-between items-center text-xs sm:text-sm md:text-base">
-                <span className="text-green-400 font-medium">Total savings</span>
-                <span className="text-green-400 font-bold">₹{savings}</span>
-              </div>
-            </div>
-          )}
-
+        {/* Scrollable body */}
+        <div className="flex-1 overflow-y-auto scrollbar-thin">
           {cart.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 sm:py-12 md:py-16">
-              <div className="h-16 w-16 sm:h-20 sm:w-20 md:h-24 md:w-24 bg-gradient-to-br from-[#161B22] to-[#2A2F38] rounded-full mb-3 sm:mb-4 md:mb-6 flex items-center justify-center border border-[#2A2F38] shadow-lg">
-                <span className="text-2xl sm:text-3xl md:text-4xl">🛒</span>
+            <div className="flex flex-col items-center justify-center h-full px-6 text-center">
+              <div className="w-20 h-20 rounded-full flex items-center justify-center mb-5"
+                style={{ background: 'var(--pastel-peach)' }}>
+                <ShoppingBag className="h-10 w-10" style={{ color: 'var(--brand)' }} />
               </div>
-              <div className="text-[#CCCCCC] text-sm sm:text-base md:text-lg font-medium">Your cart is empty</div>
-              <div className="text-[#999999] text-xs sm:text-sm mt-1">Add some products to get started</div>
+              <h3 className="text-lg font-extrabold mb-1.5" style={{ color: 'var(--text-primary)' }}>Your cart is empty</h3>
+              <p className="text-sm font-medium mb-6" style={{ color: 'var(--text-muted)' }}>Add products to get started</p>
+              <button onClick={onClose} className="btn-primary">Continue Shopping</button>
             </div>
           ) : (
-            <>
-              {/* Dynamic Delivery Info */}
-              <div className="mx-2 sm:mx-4 md:mx-6 mt-2 sm:mt-3 md:mt-4 p-2 sm:p-3 md:p-4 bg-[#0F1419] rounded-lg sm:rounded-xl md:rounded-2xl border border-[#2A2F38]">
-                <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-                  <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center">
-                    <Clock className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-xs sm:text-sm md:text-base font-medium text-[#F5F5F5]">Delivery in 8 minutes</div>
-                    <div className="text-xs sm:text-sm md:text-base text-[#CCCCCC]">Shipment of {totalItems} items</div>
-                  </div>
+            <div className="space-y-3 p-4">
+              {/* Savings banner */}
+              {savings > 0 && (
+                <div className="px-4 py-2.5 flex items-center justify-between rounded-xl"
+                  style={{ background: 'var(--success-bg)', border: '1px solid rgba(16,185,129,0.2)' }}>
+                  <span className="font-bold text-[13px]" style={{ color: 'var(--success)' }}>You save on this order</span>
+                  <span className="font-extrabold text-[14px]" style={{ color: 'var(--success)' }}>₹{savings}</span>
+                </div>
+              )}
+
+              {/* Delivery promise */}
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'var(--success-bg)' }}>
+                  <Clock className="h-4 w-4" style={{ color: 'var(--success)' }} />
+                </div>
+                <div>
+                  <p className="text-[13px] font-extrabold" style={{ color: 'var(--text-primary)' }}>Delivery in 15–30 min</p>
+                  <p className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>{totalItems} item{totalItems !== 1 ? 's' : ''} from nearby store</p>
                 </div>
               </div>
-              
-              {/* Dynamic Cart Items */}
-              <div className="mx-2 sm:mx-4 md:mx-6 mt-2 sm:mt-3 md:mt-4 space-y-1.5 sm:space-y-2 md:space-y-3">
-                {cart.map(item => (
-                  <div key={item.id} className="bg-[#161B22] rounded-lg sm:rounded-xl md:rounded-2xl p-2 sm:p-3 md:p-4 border border-[#2A2F38] shadow-lg hover:shadow-xl transition-all duration-300">
-                    <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
-                      <img src={item.image} alt={item.name} className="h-10 w-10 sm:h-16 sm:w-16 md:h-20 md:w-20 rounded-md sm:rounded-lg md:rounded-xl object-cover border border-[#2A2F38]" />
-                      <div className="flex-1 min-w-0">
-                        <div className="font-medium text-[#F5F5F5] text-xs sm:text-sm md:text-base mb-1 sm:mb-2 line-clamp-2 leading-tight">{item.name}</div>
-                        <div className="text-xs sm:text-sm md:text-base text-[#CCCCCC] mb-1 sm:mb-2">{item.unit || '1 unit'}</div>
-                        <div className="flex items-center gap-2 sm:gap-3">
-                          <span className="text-sm sm:text-base md:text-lg font-bold bg-gradient-to-r from-green-400 to-orange-500 bg-clip-text text-transparent">₹{item.price}</span>
-                          {item.originalPrice && (
-                            <span className="text-xs sm:text-sm text-[#999999] line-through">₹{item.originalPrice}</span>
-                          )}
-                        </div>
+
+              {/* Items */}
+              <div className="space-y-2">
+                {cart.map((item) => (
+                  <div key={item.id} className="flex gap-3 px-3 py-3 rounded-xl"
+                    style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+                    <div className="h-16 w-16 rounded-lg flex items-center justify-center p-1 flex-shrink-0"
+                      style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+                      <img
+                        src={resolveProductImage(item)}
+                        alt={item.name}
+                        className="max-h-full max-w-full object-contain"
+                        onError={(event) => { event.currentTarget.src = fallbackProductImage(item.name); }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-[13px] leading-snug line-clamp-2" style={{ color: 'var(--text-primary)' }}>{item.name}</p>
+                      <p className="text-[11px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>{item.unit || '1 unit'}</p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[14px] font-extrabold" style={{ color: 'var(--text-primary)' }}>₹{item.price}</span>
+                        {Number(item.originalPrice) > item.price && (
+                          <span className="text-[11px] line-through" style={{ color: 'var(--text-muted)' }}>
+                            ₹{Number(item.originalPrice)}
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1 sm:gap-1.5 bg-gradient-to-r from-green-500 to-green-600 rounded-md sm:rounded-lg px-1.5 sm:px-2 md:px-3 py-0.5 sm:py-1 md:py-2 shadow-lg">
-                        <button 
-                          className="text-white hover:bg-green-700/50 rounded p-0.5 sm:p-1 transition-all duration-200"
-                          onClick={() => handleQuantityChange(item.id, item.quantity - 1)}
-                          title="Decrease quantity"
-                        >
-                          <Minus className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4" />
+                    </div>
+                    <div className="flex items-end self-end">
+                      <div className="flex items-center rounded-lg overflow-hidden shadow-sm" style={{ background: 'var(--brand)' }}>
+                        <button onClick={() => handleQtyChange(item.id, item.quantity - 1)}
+                          className="w-7 h-7 flex items-center justify-center text-white hover:opacity-80 transition-opacity" aria-label="Decrease">
+                          <Minus className="h-3 w-3" />
                         </button>
-                        <span className="text-white font-bold text-xs sm:text-sm md:text-base min-w-[16px] sm:min-w-[20px] md:min-w-[24px] text-center">{item.quantity}</span>
-                        <button 
-                          className="text-white hover:bg-green-700/50 rounded p-0.5 sm:p-1 transition-all duration-200"
-                          onClick={() => handleQuantityChange(item.id, item.quantity + 1)}
-                          title="Increase quantity"
-                        >
-                          <Plus className="h-3 w-3 sm:h-3 sm:w-3 md:h-4 md:w-4" />
+                        <span className="w-7 text-center text-white font-extrabold text-[13px]">{item.quantity}</span>
+                        <button onClick={() => handleQtyChange(item.id, item.quantity + 1)}
+                          className="w-7 h-7 flex items-center justify-center text-white hover:opacity-80 transition-opacity" aria-label="Increase">
+                          <Plus className="h-3 w-3" />
                         </button>
                       </div>
                     </div>
                   </div>
                 ))}
               </div>
-              
-              {/* Dynamic Bill Details */}
-              <div className="mx-2 sm:mx-4 md:mx-6 mt-3 sm:mt-4 md:mt-6 p-3 sm:p-4 md:p-6 bg-[#0F1419] rounded-lg sm:rounded-xl md:rounded-2xl border border-[#2A2F38]">
-                <h3 className="font-bold text-sm sm:text-base md:text-lg mb-2 sm:mb-3 md:mb-4 text-[#F5F5F5]">Bill details</h3>
-                <div className="space-y-1.5 sm:space-y-2 md:space-y-3 text-xs sm:text-sm md:text-base">
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1.5 sm:gap-2 md:gap-3 text-[#CCCCCC]">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center">
-                        <FileText className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-white" />
-                      </div>
-                      <span>Items total</span>
-                      {savings > 0 && <span className="text-green-400 text-xs sm:text-sm bg-green-500/20 px-1.5 sm:px-2 md:px-3 py-0.5 sm:py-1 rounded-full">Saved ₹{savings}</span>}
-                    </span>
-                    <div className="text-right">
-                      {savings > 0 && <span className="text-[#999999] line-through mr-1 sm:mr-2 text-xs sm:text-sm">₹{subtotal + savings}</span>}
-                      <span className="font-bold text-[#F5F5F5] text-sm sm:text-base md:text-lg">₹{subtotal}</span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1.5 sm:gap-2 md:gap-3 text-[#CCCCCC]">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center">
-                        <Truck className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-white" />
-                      </div>
-                      <span>Delivery charge</span>
-                      <div className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 bg-[#2A2F38] rounded-full flex items-center justify-center">
-                        <Info className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3 md:w-3 text-[#999999]" />
-                      </div>
-                    </span>
-                    <span className="text-[#F5F5F5] font-medium text-sm sm:text-base md:text-lg">₹{deliveryCharge}</span>
-                  </div>
-                  
-                  <div className="flex justify-between items-center">
-                    <span className="flex items-center gap-1.5 sm:gap-2 md:gap-3 text-[#CCCCCC]">
-                      <div className="w-4 h-4 sm:w-5 sm:h-5 md:w-6 md:h-6 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center">
-                        <Shield className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-white" />
-                      </div>
-                      <span>Handling charge</span>
-                      <div className="w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 bg-[#2A2F38] rounded-full flex items-center justify-center">
-                        <Info className="h-2 w-2 sm:h-2.5 sm:w-2.5 md:h-3 md:w-3 text-[#999999]" />
-                      </div>
-                    </span>
-                    <span className="text-[#F5F5F5] font-medium text-sm sm:text-base md:text-lg">₹{handlingCharge}</span>
-                  </div>
-                  
-                  <div className="border-t border-[#2A2F38] pt-1.5 sm:pt-2 md:pt-3 mt-1.5 sm:mt-2 md:mt-3">
-                    <div className="flex justify-between items-center font-bold text-sm sm:text-base md:text-xl">
-                      <span className="text-[#F5F5F5]">Grand total</span>
-                      <span className="bg-gradient-to-r from-green-400 to-orange-500 bg-clip-text text-transparent">₹{total}</span>
-                    </div>
+
+              {/* Bill */}
+              <div className="px-4 py-4 rounded-xl"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+                <h3 className="font-extrabold text-[14px] mb-3" style={{ color: 'var(--text-primary)' }}>Bill Details</h3>
+                <div className="space-y-2.5">
+                  <BillRow icon={<FileText className="h-3 w-3" />} label="Items total" value={`₹${subtotal}`}
+                    badge={savings > 0 ? `Saved ₹${savings}` : undefined} strikethrough={savings > 0 ? `₹${subtotal + savings}` : undefined} />
+                  <BillRow icon={<Truck className="h-3 w-3" />} label="Delivery charge" value={`₹${deliveryCharge}`} />
+                  <BillRow icon={<Shield className="h-3 w-3" />} label="Handling charge" value={`₹${handlingCharge}`} />
+                  <div className="flex justify-between items-center pt-2.5 mt-2.5"
+                    style={{ borderTop: '1px solid var(--border)' }}>
+                    <span className="font-extrabold text-[15px]" style={{ color: 'var(--text-primary)' }}>Grand Total</span>
+                    <span className="font-extrabold text-[17px]" style={{ color: 'var(--text-primary)' }}>₹{total}</span>
                   </div>
                 </div>
-                
-                {savings > 0 && (
-                  <div className="bg-gradient-to-r from-green-500/20 to-blue-500/20 rounded-lg sm:rounded-xl md:rounded-2xl p-2 sm:p-3 md:p-4 mt-3 sm:mt-4 md:mt-6 border border-green-500/30">
-                    <div className="text-green-300 text-xs sm:text-sm md:text-base text-center">Shop for ₹88 more to save ₹30 on delivery</div>
-                  </div>
-                )}
               </div>
-              
-              {/* Dynamic Address Section */}
-              <div className="mx-2 sm:mx-4 md:mx-6 mt-2 sm:mt-3 md:mt-4 p-2 sm:p-3 md:p-4 bg-[#161B22] rounded-lg sm:rounded-xl md:rounded-2xl border border-[#2A2F38] flex items-center gap-2 sm:gap-3 md:gap-4">
-                <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-gradient-to-br from-red-500 to-red-600 rounded-full flex items-center justify-center">
-                  <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-white" />
+
+              {/* Address */}
+              <div className="flex items-center gap-3 px-4 py-3 rounded-xl"
+                style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+                  style={{ background: 'var(--pastel-peach)' }}>
+                  <MapPin className="h-4 w-4" style={{ color: 'var(--brand)' }} />
                 </div>
-                <div className="flex-1">
-                  <div className="font-medium text-[#F5F5F5] text-xs sm:text-sm md:text-base">
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-[13px] truncate" style={{ color: 'var(--text-primary)' }}>
                     {selectedAddress ? selectedAddress.label : 'Delivering to Home'}
-                  </div>
-                  <div className="text-xs sm:text-sm md:text-base text-[#CCCCCC]">
-                    {selectedAddress ? selectedAddress.address : 'Select address for delivery'}
-                  </div>
+                  </p>
+                  <p className="text-[11px] font-medium truncate" style={{ color: 'var(--text-muted)' }}>
+                    {selectedAddress ? selectedAddress.address : 'Tap to select delivery address'}
+                  </p>
                 </div>
-                <button 
-                  className="text-green-400 font-medium text-xs sm:text-sm md:text-base hover:text-green-300 transition-colors duration-200 px-1.5 sm:px-2 md:px-3 py-0.5 sm:py-1 md:py-2 rounded hover:bg-green-500/20" 
-                  onClick={() => setAddressSelectorOpen(true)}
-                >
-                  Change
+                <button onClick={() => setAddressSelectorOpen(true)}
+                  className="flex items-center gap-0.5 font-bold text-[12px] flex-shrink-0 transition-colors"
+                  style={{ color: 'var(--brand)' }}>
+                  Change <ChevronRight className="h-3.5 w-3.5" />
                 </button>
               </div>
-            </>
+            </div>
           )}
         </div>
-        
-        {/* Dynamic Bottom Bar */}
+
+        {/* Checkout CTA */}
         {cart.length > 0 && (
-          <div className="border-t border-[#2A2F38] bg-[#0B0F17] p-3 sm:p-4 md:p-6">
+          <div className="px-4 py-4" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
             <button
-              className="w-full bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-bold py-3 sm:py-4 md:py-5 rounded-lg sm:rounded-xl md:rounded-2xl flex items-center justify-between px-3 sm:px-4 md:px-6 shadow-lg hover:shadow-green-500/25 transition-all duration-300 transform hover:scale-[1.01]"
               onClick={placeOrderMockRazorpay}
+              disabled={placing}
+              className="w-full font-extrabold py-4 rounded-xl flex items-center justify-between px-5 text-white transition-all duration-200 disabled:opacity-60 disabled:cursor-not-allowed"
+              style={{ background: 'var(--brand)', boxShadow: 'var(--shadow-brand)' }}
             >
               <div className="text-left">
-                <div className="text-lg sm:text-xl md:text-2xl font-bold">₹{total}</div>
-                <div className="text-xs sm:text-sm opacity-90">TOTAL</div>
-              </div>
-              <div className="flex items-center gap-2 sm:gap-3">
-                <span className="text-sm sm:text-base md:text-lg">Pay (Test)</span>
-                <div className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 bg-white/20 rounded-full flex items-center justify-center">
-                  <span className="text-white text-xs sm:text-sm md:text-base">→</span>
+                <div className="text-[18px] font-extrabold leading-none">₹{total}</div>
+                <div className="text-[10px] uppercase tracking-wider opacity-90 font-semibold mt-0.5">
+                  {totalItems} item{totalItems !== 1 ? 's' : ''}
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {placing ? <span className="text-[14px] font-bold">Placing…</span> : (
+                  <><span className="text-[14px] font-bold">Place Order</span><ArrowRight className="h-4 w-4" /></>
+                )}
               </div>
             </button>
           </div>
         )}
-        
-        <AddressSelector
-          isOpen={addressSelectorOpen}
-          onClose={() => setAddressSelectorOpen(false)}
-          onSelect={handleAddressSelect}
-          selectedAddressId={selectedAddress?.id}
-        />
+
+        <AddressSelector isOpen={addressSelectorOpen} onClose={() => setAddressSelectorOpen(false)}
+          onSelect={(a) => { setSelectedAddress(a); setAddressSelectorOpen(false); }}
+          selectedAddressId={selectedAddress?.id} />
       </div>
     </div>
   );
 };
 
-export default CartDrawer; 
+const BillRow: React.FC<{ icon: React.ReactNode; label: string; value: string; badge?: string; strikethrough?: string }> = ({ icon, label, value, badge, strikethrough }) => (
+  <div className="flex items-center justify-between text-[13px]">
+    <span className="flex items-center gap-2 font-medium" style={{ color: 'var(--text-secondary)' }}>
+      <span className="w-5 h-5 rounded-full flex items-center justify-center" style={{ background: 'var(--bg-elevated)', color: 'var(--text-muted)' }}>
+        {icon}
+      </span>
+      {label}
+      {badge && (
+        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ background: 'var(--success-bg)', color: 'var(--success)' }}>
+          {badge}
+        </span>
+      )}
+    </span>
+    <span className="font-bold flex items-center gap-1.5" style={{ color: 'var(--text-primary)' }}>
+      {strikethrough && <span className="line-through text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>{strikethrough}</span>}
+      {value}
+    </span>
+  </div>
+);
+
+export default CartDrawer;

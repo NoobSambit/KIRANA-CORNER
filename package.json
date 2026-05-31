@@ -5,8 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "dev:api": "vercel dev --listen 3001",
-    "dev:full": "concurrently \"npm run dev\" \"npm run dev:api\"",
+    "dev:api": "node -e \"console.log('Local API routes are served by Vite. Run npm run dev and use /api/recipe-cart-suggestions.')\"",
+    "dev:full": "npm run dev",
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",

@@ -4,6 +4,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from './firebase';
 import { CartProvider } from './components/CartContext';
 import { SearchProvider } from './components/SearchContext';
+import { ThemeProvider } from './components/ThemeContext';
 import AppRoutes from './routes/index';
 
 class AppErrorBoundary extends React.Component<
@@ -81,13 +82,15 @@ function App() {
 
   return (
     <AppErrorBoundary>
-      <CartProvider>
-        <SearchProvider>
-          <Router>
-            <AppRoutes isAuthenticated={!!user} />
-          </Router>
-        </SearchProvider>
-      </CartProvider>
+      <ThemeProvider>
+        <CartProvider>
+          <SearchProvider>
+            <Router>
+              <AppRoutes isAuthenticated={!!user} />
+            </Router>
+          </SearchProvider>
+        </CartProvider>
+      </ThemeProvider>
     </AppErrorBoundary>
   );
 }

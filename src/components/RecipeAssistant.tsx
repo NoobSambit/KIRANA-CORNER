@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { useCart } from './CartContext';
 import { fetchRecipeCartSuggestions } from '../utils/recipeAssistantClient';
+import { resolveProductImage } from '../utils/productImages';
 import type {
   IngredientSuggestion,
   ProductMatch,
@@ -34,8 +35,8 @@ const EXAMPLE_PROMPTS = [
   'chicken biryani for 4',
   'Bengali fish curry',
   'paneer butter masala',
-  'small party tonight for 6 people',
-  'simple dal rice dinner',
+  'dal rice dinner',
+  'party snacks for 6',
 ];
 
 const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ userLocation, radiusKm }) => {
@@ -65,16 +66,11 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ userLocation, radiusK
   const submitPrompt = async (prompt: string) => {
     const trimmed = prompt.trim();
     if (!trimmed || loading) return;
-
     setLoading(true);
     setError(null);
     setAdded(false);
     try {
-      const result = await fetchRecipeCartSuggestions({
-        message: trimmed,
-        userLocation,
-        radiusKm,
-      });
+      const result = await fetchRecipeCartSuggestions({ message: trimmed, userLocation, radiusKm });
       setResponse(result);
       setSelections(buildInitialSelections(result));
       setMessage(trimmed);
@@ -85,32 +81,28 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ userLocation, radiusK
     }
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
     void submitPrompt(message);
   };
 
   const updateSelection = (index: number, patch: Partial<SelectionState>) => {
     setSelections((current) => ({
       ...current,
-      [index]: {
-        quantity: 1,
-        included: false,
-        ...current[index],
-        ...patch,
-      },
+      [index]: { quantity: 1, included: false, ...current[index], ...patch },
     }));
   };
 
   const addSelectedToCart = () => {
     selectedItems.forEach(({ match, quantity }) => {
+      const image = resolveProductImage(match);
       addToCart({
         id: match.productId,
         productId: match.productId,
         name: match.name,
         price: match.price,
         originalPrice: match.originalPrice,
-        image: match.image || fallbackProductImage(match.name),
+        image,
         quantity,
         shop: match.shopName,
         shopId: match.shopId,
@@ -123,87 +115,108 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ userLocation, radiusK
   };
 
   return (
-    <section className="bg-white/80 dark:bg-white/5 backdrop-blur-md rounded-2xl p-4 sm:p-6 shadow-lg border border-white/20 dark:border-white/10">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-md">
-              <ChefHat className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-white">Recipe Assistant</h2>
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                Matched from shops within {radiusKm}km
-              </p>
-            </div>
+    <div className="p-4 sm:p-6 rounded-b-2xl" style={{ background: 'var(--bg-card)' }}>
+      {/* Header row */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2.5">
+          <ChefHat className="h-5 w-5 text-orange-500" />
+          <div>
+            <h2 className="text-[15px] font-extrabold" style={{ color: 'var(--text-primary)' }}>What are you cooking?</h2>
+            <p className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>Matched from shops within {radiusKm}km</p>
           </div>
         </div>
-
         {response && (
-          <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-            <CheckCircle2 className="h-4 w-4 text-green-600 dark:text-green-400" />
-            <span>{response.nearbyShopCount} nearby shops checked</span>
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-lg"
+            style={{ color: 'var(--text-secondary)', background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+            {response.nearbyShopCount} shops
           </div>
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-5 flex flex-col sm:flex-row gap-3">
+      {/* Input form */}
+      <form onSubmit={handleSubmit} className="flex gap-2 mb-3">
         <input
           value={message}
-          onChange={(event) => setMessage(event.target.value)}
-          className="min-h-[44px] flex-1 rounded-xl border border-orange-200 dark:border-white/10 bg-white/90 dark:bg-slate-950/60 px-4 text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-orange-500"
-          placeholder="chicken biryani for 4"
+          onChange={(e) => setMessage(e.target.value)}
+          className="input-base flex-1 min-h-[44px] text-[14px]"
+          placeholder="e.g. chicken biryani for 4"
           maxLength={300}
         />
         <button
           type="submit"
           disabled={loading || !message.trim()}
-          className="min-h-[44px] inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 px-5 font-semibold text-white shadow-md transition hover:from-orange-600 hover:to-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+          className="min-h-[44px] inline-flex items-center gap-1.5 px-4 rounded-xl text-white font-bold text-[13px] shadow-sm transition-all flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+          style={{ background: 'var(--brand)' }}
         >
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-          <span>Suggest</span>
+          <span className="hidden sm:inline">Suggest</span>
         </button>
       </form>
 
-      <div className="mt-3 flex flex-wrap gap-2">
+      {/* Example prompts */}
+      <div className="flex flex-wrap gap-1.5 mb-4">
         {EXAMPLE_PROMPTS.map((prompt) => (
           <button
             key={prompt}
             type="button"
             onClick={() => void submitPrompt(prompt)}
             disabled={loading}
-            className="rounded-full border border-orange-200 dark:border-white/10 bg-orange-50/80 dark:bg-white/5 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-200 transition hover:bg-orange-100 dark:hover:bg-white/10 disabled:opacity-60"
+            className="rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all shadow-sm disabled:opacity-50"
+            style={{
+              border: '1px solid var(--border)',
+              background: 'var(--bg-elevated)',
+              color: 'var(--text-secondary)',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--brand)';
+              (e.currentTarget as HTMLButtonElement).style.color = 'var(--brand)';
+              (e.currentTarget as HTMLButtonElement).style.background = 'var(--pastel-peach)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)';
+              (e.currentTarget as HTMLButtonElement).style.color = 'var(--text-secondary)';
+              (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg-elevated)';
+            }}
           >
             {prompt}
           </button>
         ))}
       </div>
 
+      {/* Error */}
       {error && (
-        <div className="mt-4 flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-200">
+        <div className="mb-4 flex items-start gap-2 rounded-xl p-3 text-sm"
+          style={{ border: '1px solid var(--error)', background: 'var(--error-bg)', color: 'var(--error)' }}>
           <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
+      {/* Results */}
       {response && (
-        <div className="mt-6 grid gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="space-y-4">
-            <div className="rounded-xl border border-slate-200 bg-white/75 p-4 dark:border-white/10 dark:bg-slate-950/40">
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-2 grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+
+          {/* Ingredient list */}
+          <div className="space-y-3">
+            {/* Recipe card */}
+            <div className="rounded-2xl p-4 shadow-card"
+              style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+              <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{response.recipe.title}</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                  <h3 className="text-[15px] font-extrabold tracking-tight" style={{ color: 'var(--text-primary)' }}>{response.recipe.title}</h3>
+                  <p className="text-[12px] font-medium mt-0.5" style={{ color: 'var(--text-muted)' }}>
                     {response.recipe.servings} serving{response.recipe.servings === 1 ? '' : 's'}
                   </p>
                 </div>
-                <span className="w-fit rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700 dark:bg-orange-500/20 dark:text-orange-200">
+                <span className="flex-none rounded-full px-2.5 py-1 text-[11px] font-bold"
+                  style={{ background: 'var(--pastel-peach)', border: '1px solid var(--border-brand)', color: 'var(--brand)' }}>
                   {response.ingredients.length} ingredient{response.ingredients.length === 1 ? '' : 's'}
                 </span>
               </div>
-
               {response.recipe.steps.length > 0 && (
-                <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-slate-700 dark:text-slate-200">
+                <ol className="mt-3 list-decimal space-y-1.5 pl-5 text-[12px] font-medium leading-relaxed"
+                  style={{ color: 'var(--text-secondary)' }}>
                   {response.recipe.steps.slice(0, 4).map((step) => (
                     <li key={step}>{step}</li>
                   ))}
@@ -212,39 +225,46 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ userLocation, radiusK
             </div>
 
             {response.ingredients.length === 0 ? (
-              <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+              <div className="rounded-xl p-4 text-sm font-medium"
+                style={{ border: '1px solid var(--warn)', background: 'var(--warn-bg)', color: 'var(--warn)' }}>
                 No purchasable ingredients were returned for this request.
               </div>
             ) : (
               response.ingredients.map((ingredient, index) => (
                 <IngredientRow
                   key={`${ingredient.intent.name}-${index}`}
-                  index={index}
+                  index={ingredient.intent.name + index}
                   ingredient={ingredient}
                   selection={selections[index]}
                   onSelectionChange={updateSelection}
+                  arrayIndex={index}
                 />
               ))
             )}
           </div>
 
-          <aside className="rounded-xl border border-slate-200 bg-white/75 p-4 dark:border-white/10 dark:bg-slate-950/40 xl:sticky xl:top-24 xl:h-fit">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">Cart Review</h3>
-            <div className="mt-3 space-y-3">
+          {/* Cart review sidebar */}
+          <aside className="rounded-2xl p-4 shadow-card xl:sticky xl:top-24 xl:h-fit"
+            style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+            <h3 className="text-[14px] font-extrabold mb-3" style={{ color: 'var(--text-primary)' }}>Cart Review</h3>
+            <div className="space-y-3 mb-4">
               {selectedItems.length === 0 ? (
-                <p className="text-sm text-slate-600 dark:text-slate-300">No products selected.</p>
+                <p className="text-[12px] font-medium text-center py-4" style={{ color: 'var(--text-muted)' }}>
+                  Select ingredients to add to cart
+                </p>
               ) : (
                 selectedItems.map(({ match, quantity }) => (
-                  <div key={match.productId} className="flex items-center gap-3">
+                  <div key={match.productId} className="flex items-center gap-2.5">
                     <img
-                      src={match.image || fallbackProductImage(match.name)}
+                      src={resolveProductImage(match)}
                       alt={match.name}
-                      className="h-12 w-12 rounded-lg object-cover bg-orange-100"
+                      className="h-10 w-10 rounded-lg object-contain flex-shrink-0"
+                      style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-slate-900 dark:text-white">{match.name}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">
-                        {quantity} x ₹{match.price}
+                      <p className="truncate text-[12px] font-bold" style={{ color: 'var(--text-primary)' }}>{match.name}</p>
+                      <p className="text-[11px] font-semibold mt-0.5" style={{ color: 'var(--text-muted)' }}>
+                        {quantity} × ₹{match.price}
                       </p>
                     </div>
                   </div>
@@ -252,123 +272,139 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ userLocation, radiusK
               )}
             </div>
 
-            <div className="mt-4 border-t border-slate-200 pt-4 dark:border-white/10">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-slate-600 dark:text-slate-300">Selected total</span>
-                <span className="text-lg font-bold text-slate-900 dark:text-white">₹{selectedTotal}</span>
+            <div className="pt-3" style={{ borderTop: '1px solid var(--border)' }}>
+              <div className="flex items-center justify-between text-[13px] mb-3">
+                <span className="font-semibold" style={{ color: 'var(--text-secondary)' }}>Selected total</span>
+                <span className="text-[16px] font-extrabold" style={{ color: 'var(--text-primary)' }}>₹{selectedTotal}</span>
               </div>
               <button
                 type="button"
                 onClick={addSelectedToCart}
                 disabled={selectedItems.length === 0}
-                className="mt-4 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 px-4 font-semibold text-white shadow-md transition hover:from-green-600 hover:to-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                className="w-full flex items-center justify-center gap-2 min-h-[44px] rounded-xl font-bold text-[13px] shadow-orange transition-all hover:-translate-y-0.5 disabled:shadow-none disabled:cursor-not-allowed disabled:transform-none"
+                style={{
+                  background: selectedItems.length === 0 ? 'var(--bg-elevated)' : 'var(--brand)',
+                  color: selectedItems.length === 0 ? 'var(--text-muted)' : '#fff',
+                }}
               >
                 <ShoppingCart className="h-4 w-4" />
-                <span>Add Selected</span>
+                Add Selected ({selectedItems.length})
               </button>
               {added && (
-                <div className="mt-3 flex items-center gap-2 text-sm font-medium text-green-700 dark:text-green-300">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span>Selected products added to cart.</span>
+                <div className="mt-3 flex items-center gap-2 text-[12px] font-bold p-2 rounded-lg border justify-center"
+                  style={{ color: 'var(--success)', background: 'var(--success-bg)', borderColor: 'var(--success)' }}>
+                  <CheckCircle2 className="h-3.5 w-3.5" />
+                  Added to cart!
                 </div>
               )}
             </div>
           </aside>
         </div>
       )}
-    </section>
+    </div>
   );
 };
 
+// ─── IngredientRow ────────────────────────────────────────────────────────────
 interface IngredientRowProps {
-  index: number;
+  index: string;
+  arrayIndex: number;
   ingredient: IngredientSuggestion;
   selection?: SelectionState;
   onSelectionChange: (index: number, patch: Partial<SelectionState>) => void;
 }
 
-const IngredientRow: React.FC<IngredientRowProps> = ({
-  index,
-  ingredient,
-  selection,
-  onSelectionChange,
-}) => {
-  const selectedMatch = ingredient.matches.find((match) => match.productId === selection?.productId);
+const IngredientRow: React.FC<IngredientRowProps> = ({ arrayIndex, ingredient, selection, onSelectionChange }) => {
+  const selectedMatch = ingredient.matches.find((m) => m.productId === selection?.productId);
   const statusConfig = getStatusConfig(ingredient.status);
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white/75 p-4 dark:border-white/10 dark:bg-slate-950/40">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="rounded-2xl p-4 shadow-card"
+      style={{ border: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+      {/* Header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between mb-3">
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h4 className="font-bold text-slate-900 dark:text-white">{ingredient.intent.name}</h4>
-            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${statusConfig.className}`}>
+            <h4 className="font-extrabold text-[14px]" style={{ color: 'var(--text-primary)' }}>{ingredient.intent.name}</h4>
+            <span className={`rounded-md px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider border ${statusConfig.className}`}>
               {statusConfig.label}
             </span>
           </div>
-          <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+          <p className="mt-0.5 text-[12px] font-medium" style={{ color: 'var(--text-muted)' }}>
             {formatIntentQuantity(ingredient.intent)}
           </p>
         </div>
-
         {selectedMatch && (
-          <label className="inline-flex w-fit items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+          <label className="inline-flex w-fit items-center gap-2 text-[12px] font-bold cursor-pointer flex-shrink-0"
+            style={{ color: 'var(--text-secondary)' }}>
             <input
               type="checkbox"
               checked={selection?.included || false}
-              onChange={(event) => onSelectionChange(index, { included: event.target.checked })}
-              className="h-4 w-4 rounded border-slate-300 text-orange-600 focus:ring-orange-500"
+              onChange={(e) => onSelectionChange(arrayIndex, { included: e.target.checked })}
+              className="h-4 w-4 rounded border-gray-300 text-orange-500 focus:ring-orange-400 transition-colors"
             />
-            Select
+            Include
           </label>
         )}
       </div>
 
+      {/* Match options */}
       {ingredient.matches.length === 0 ? (
-        <div className="mt-3 flex items-start gap-2 rounded-xl bg-slate-100 p-3 text-sm text-slate-600 dark:bg-white/5 dark:text-slate-300">
-          <XCircle className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+        <div className="flex items-start gap-2 rounded-xl p-3 text-[12px] font-medium"
+          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+          <XCircle className="mt-0.5 h-4 w-4 shrink-0" style={{ color: 'var(--text-muted)' }} />
           <span>No nearby in-stock product matched this ingredient.</span>
         </div>
       ) : (
-        <div className="mt-4 grid gap-3">
+        <div className="grid gap-2">
           {ingredient.matches.map((match) => {
             const selected = selection?.productId === match.productId;
             return (
               <button
                 key={match.productId}
                 type="button"
-                onClick={() =>
-                  onSelectionChange(index, {
-                    productId: match.productId,
-                    quantity: Math.max(1, match.recommendedQuantity || 1),
-                    included: ingredient.status === 'matched',
-                  })
-                }
-                className={`flex min-h-[88px] items-center gap-3 rounded-xl border p-3 text-left transition ${
-                  selected
-                    ? 'border-orange-400 bg-orange-50 dark:border-orange-400 dark:bg-orange-500/10'
-                    : 'border-slate-200 bg-white/80 hover:border-orange-300 dark:border-white/10 dark:bg-white/5 dark:hover:border-orange-400'
-                }`}
+                onClick={() => onSelectionChange(arrayIndex, {
+                  productId: match.productId,
+                  quantity: Math.max(1, match.recommendedQuantity || 1),
+                  included: ingredient.status === 'matched',
+                })}
+                className="flex items-center gap-3 rounded-xl p-3 text-left transition-all duration-200 min-h-[76px]"
+                style={{
+                  border: selected ? '1px solid var(--brand)' : '1px solid var(--border)',
+                  background: selected ? 'var(--pastel-peach)' : 'var(--bg-elevated)',
+                }}
               >
-                <img
-                  src={match.image || fallbackProductImage(match.name)}
-                  alt={match.name}
-                  className="h-16 w-16 shrink-0 rounded-lg object-cover bg-orange-100"
-                />
+                <div className="h-14 w-14 shrink-0 rounded-lg flex items-center justify-center p-1"
+                  style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
+                  <img
+                    src={resolveProductImage(match)}
+                    alt={match.name}
+                    className="max-h-full max-w-full object-contain"
+                  />
+                </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
                     <div className="min-w-0">
-                      <p className="line-clamp-2 text-sm font-bold text-slate-900 dark:text-white">{match.name}</p>
-                      <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      <p className="line-clamp-2 text-[12px] font-bold leading-snug" style={{ color: 'var(--text-primary)' }}>{match.name}</p>
+                      <p className="mt-0.5 text-[10px] font-medium" style={{ color: 'var(--text-muted)' }}>
                         {match.shopName} · {formatDistance(match.distanceKm)}
                       </p>
                     </div>
                     <div className="shrink-0 text-left sm:text-right">
-                      <p className="text-sm font-bold text-slate-900 dark:text-white">₹{match.price}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400">{match.confidence}% match</p>
+                      <p className="text-[13px] font-extrabold" style={{ color: 'var(--text-primary)' }}>₹{match.price}</p>
+                      <p className="text-[10px] font-bold px-1.5 py-0.5 rounded inline-block mt-0.5"
+                        style={
+                          match.confidence >= 80
+                            ? { color: 'var(--success)', background: 'var(--success-bg)' }
+                            : match.confidence >= 50
+                            ? { color: 'var(--warn)', background: 'var(--warn-bg)' }
+                            : { color: 'var(--text-muted)', background: 'var(--bg-elevated)' }
+                        }>
+                        {match.confidence}% match
+                      </p>
                     </div>
                   </div>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mt-0.5 text-[10px] font-semibold" style={{ color: 'var(--text-muted)' }}>
                     {formatPack(match)} · {match.stock} in stock
                   </p>
                 </div>
@@ -378,41 +414,40 @@ const IngredientRow: React.FC<IngredientRowProps> = ({
         </div>
       )}
 
+      {/* Quantity stepper */}
       {selectedMatch && (
-        <div className="mt-3 flex items-center justify-between rounded-xl bg-slate-100 p-2 dark:bg-white/5">
-          <span className="px-2 text-sm font-medium text-slate-700 dark:text-slate-200">Quantity</span>
-          <div className="flex items-center gap-2">
+        <div className="mt-3 flex items-center justify-between rounded-xl px-3 py-2.5"
+          style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+          <span className="text-[12px] font-bold" style={{ color: 'var(--text-secondary)' }}>Quantity</span>
+          <div className="flex items-center gap-1">
             <button
               type="button"
-              onClick={() => onSelectionChange(index, { quantity: Math.max(1, (selection?.quantity || 1) - 1) })}
-              className="rounded-lg bg-white p-2 text-slate-700 shadow-sm transition hover:bg-orange-50 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
+              onClick={() => onSelectionChange(arrayIndex, { quantity: Math.max(1, (selection?.quantity || 1) - 1) })}
+              className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm transition"
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
               title="Decrease quantity"
             >
-              <Minus className="h-4 w-4" />
+              <Minus className="h-3 w-3" />
             </button>
             <input
               type="number"
               min={1}
               max={selectedMatch.stock}
               value={selection?.quantity || 1}
-              onChange={(event) =>
-                onSelectionChange(index, {
-                  quantity: clampQuantity(Number(event.target.value), selectedMatch.stock),
-                })
-              }
-              className="h-10 w-16 rounded-lg border border-slate-200 bg-white text-center text-sm font-bold text-slate-900 dark:border-white/10 dark:bg-slate-950 dark:text-white"
+              onChange={(e) => onSelectionChange(arrayIndex, {
+                quantity: clampQuantity(Number(e.target.value), selectedMatch.stock),
+              })}
+              className="h-8 w-11 rounded-lg border-none bg-transparent text-center text-[13px] font-bold focus:ring-0 p-0"
+              style={{ color: 'var(--text-primary)' }}
             />
             <button
               type="button"
-              onClick={() =>
-                onSelectionChange(index, {
-                  quantity: Math.min(selectedMatch.stock, (selection?.quantity || 1) + 1),
-                })
-              }
-              className="rounded-lg bg-white p-2 text-slate-700 shadow-sm transition hover:bg-orange-50 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-900"
+              onClick={() => onSelectionChange(arrayIndex, { quantity: Math.min(selectedMatch.stock, (selection?.quantity || 1) + 1) })}
+              className="w-8 h-8 rounded-lg flex items-center justify-center shadow-sm transition"
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-primary)' }}
               title="Increase quantity"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-3 w-3" />
             </button>
           </div>
         </div>
@@ -421,6 +456,7 @@ const IngredientRow: React.FC<IngredientRowProps> = ({
   );
 };
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function buildInitialSelections(response: RecipeAssistantResponse): Record<number, SelectionState> {
   return response.ingredients.reduce<Record<number, SelectionState>>((acc, ingredient, index) => {
     const primary = ingredient.matches[0];
@@ -431,43 +467,25 @@ function buildInitialSelections(response: RecipeAssistantResponse): Record<numbe
         included: ingredient.status === 'matched',
       };
     } else {
-      acc[index] = {
-        quantity: 1,
-        included: false,
-      };
+      acc[index] = { quantity: 1, included: false };
     }
     return acc;
   }, {});
 }
 
 function getStatusConfig(status: IngredientSuggestion['status']) {
-  if (status === 'matched') {
-    return {
-      label: 'Matched',
-      className: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-200',
-    };
-  }
-  if (status === 'low_confidence') {
-    return {
-      label: 'Possible match',
-      className: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-200',
-    };
-  }
-  return {
-    label: 'Not found',
-    className: 'bg-slate-100 text-slate-700 dark:bg-white/10 dark:text-slate-200',
-  };
+  if (status === 'matched')       return { label: 'Matched',        className: 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/30' };
+  if (status === 'low_confidence') return { label: 'Possible match', className: 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900/30'       };
+  return                                   { label: 'Not found',     className: 'bg-gray-100 dark:bg-zinc-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-zinc-700'         };
 }
 
 function formatIntentQuantity(intent: IngredientSuggestion['intent']): string {
-  if (!intent.quantity || !intent.unit) return 'Quantity decided from available pack size';
+  if (!intent.quantity || !intent.unit) return 'Pack size based';
   return `${intent.quantity}${intent.unit}`;
 }
 
 function formatPack(match: ProductMatch): string {
-  if (match.packSize?.quantity && match.packSize?.unit) {
-    return `${match.packSize.quantity}${match.packSize.unit}`;
-  }
+  if (match.packSize?.quantity && match.packSize?.unit) return `${match.packSize.quantity}${match.packSize.unit}`;
   return match.unitType || '1 unit';
 }
 
@@ -479,12 +497,6 @@ function formatDistance(distanceKm: number): string {
 function clampQuantity(value: number, stock: number): number {
   if (!Number.isFinite(value)) return 1;
   return Math.min(Math.max(1, Math.floor(value)), Math.max(1, stock));
-}
-
-function fallbackProductImage(name: string): string {
-  const label = (name || 'Product').slice(0, 24).replace(/[<>&'"]/g, '');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="300" height="300" viewBox="0 0 300 300"><rect width="300" height="300" fill="#fff7ed"/><rect x="35" y="42" width="230" height="216" rx="24" fill="#f97316" opacity=".9"/><circle cx="150" cy="112" r="40" fill="#ffffff" opacity=".9"/><path d="M88 204c16-40 39-60 69-60s53 20 69 60" fill="none" stroke="#ffffff" stroke-width="18" stroke-linecap="round"/><text x="150" y="254" text-anchor="middle" font-family="Arial, sans-serif" font-size="18" font-weight="700" fill="#ffffff">${label}</text></svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 export default RecipeAssistant;

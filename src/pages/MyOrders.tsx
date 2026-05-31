@@ -3,203 +3,189 @@ import { useNavigate } from 'react-router-dom';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase';
 import { getCustomerOrders } from '../utils/orderUtils';
-import { Clock, CheckCircle, Truck, Package, ArrowLeft, Star } from 'lucide-react';
+import { Clock, CheckCircle, Truck, Package, ArrowLeft, Star, ShoppingBag, Store } from 'lucide-react';
+
+type OStatus = 'Pending' | 'Accepted' | 'Preparing' | 'Ready' | 'Delivered' | string;
+const STEPS: OStatus[] = ['Pending', 'Accepted', 'Preparing', 'Delivered'];
+
+const STATUS: Record<string, { label: string; color: string; bg: string; Icon: React.FC<{className?: string}> }> = {
+  Pending:   { label: 'Pending',   color: '#D97706', bg: 'var(--warn-bg)',    Icon: Clock        },
+  Accepted:  { label: 'Accepted',  color: '#3B82F6', bg: 'var(--pastel-sky)', Icon: CheckCircle  },
+  Preparing: { label: 'Preparing', color: '#8B5CF6', bg: 'var(--pastel-violet)', Icon: Package   },
+  Ready:     { label: 'Ready',     color: '#10B981', bg: 'var(--success-bg)', Icon: CheckCircle  },
+  Delivered: { label: 'Delivered', color: '#10B981', bg: 'var(--success-bg)', Icon: Truck        },
+};
 
 const MyOrders: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [user, setUser] = useState<any>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        
-        // Listen for real-time order updates
-        const unsubscribeOrders = getCustomerOrders(currentUser.uid, (snapshot) => {
-          const orderList = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          }));
-          setOrders(orderList);
-          setLoading(false);
-        });
-
-        return () => unsubscribeOrders();
-      } else {
-        navigate('/login');
-      }
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) { navigate('/login'); return; }
+      const unsubOrders = getCustomerOrders(user.uid, (snap: any) => {
+        setOrders(snap.docs.map((d: any) => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      });
+      return () => unsubOrders();
     });
-
-    return () => unsubscribe();
+    return () => unsub();
   }, [navigate]);
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Pending':
-        return <Clock className="h-5 w-5 text-yellow-600" />;
-      case 'Accepted':
-        return <CheckCircle className="h-5 w-5 text-blue-600" />;
-      case 'Preparing':
-        return <Package className="h-5 w-5 text-purple-600" />;
-      case 'Ready':
-        return <CheckCircle className="h-5 w-5 text-emerald-600" />;
-      case 'Delivered':
-        return <Truck className="h-5 w-5 text-emerald-600" />;
-      default:
-        return <Clock className="h-5 w-5 text-gray-600" />;
-    }
-  };
+  const fmt = (d: string) => !d ? '' : new Date(d).toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit',
+  });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Pending':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'Accepted':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'Preparing':
-        return 'bg-purple-100 text-purple-700 border-purple-200';
-      case 'Ready':
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      case 'Delivered':
-        return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-IN', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50 flex items-center justify-center">
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-8 shadow-xl">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto"></div>
-          <p className="text-slate-600 mt-4 text-center">Loading your orders...</p>
+  if (loading) return (
+    <div className="min-h-screen" style={{ background: 'var(--bg-base)' }}>
+      <div className="max-w-2xl mx-auto px-4 py-6">
+        <div className="h-7 skeleton rounded w-32 mb-6" />
+        <div className="space-y-4">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="rounded-2xl p-5 space-y-3" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+              <div className="h-4 skeleton rounded w-1/3" />
+              <div className="h-3 skeleton rounded w-1/2" />
+              <div className="h-10 skeleton rounded" />
+            </div>
+          ))}
         </div>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-amber-50 to-yellow-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen" style={{ background: 'var(--bg-base)' }}>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-5">
         {/* Header */}
-        <div className="mb-8">
-          <button
-            onClick={() => navigate('/dashboard')}
-            className="flex items-center space-x-2 text-slate-600 hover:text-slate-900 mb-4 transition-colors"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span>Back to Dashboard</span>
+        <div className="flex items-center gap-3 mb-5">
+          <button onClick={() => navigate('/dashboard')}
+            className="flex items-center justify-center w-9 h-9 rounded-xl shadow-sm transition-colors flex-shrink-0"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+            <ArrowLeft className="h-4 w-4" />
           </button>
-          
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">
-            My Orders 📦
-          </h1>
-          <p className="text-slate-600">Track your orders and delivery status</p>
+          <div>
+            <h1 className="text-xl font-extrabold" style={{ color: 'var(--text-primary)' }}>My Orders</h1>
+            {orders.length > 0 && <p className="text-[12px] font-medium" style={{ color: 'var(--text-muted)' }}>{orders.length} orders</p>}
+          </div>
         </div>
 
-        {/* Orders List */}
+        {/* Empty */}
         {orders.length === 0 ? (
-          <div className="bg-white/80 backdrop-blur-md rounded-2xl p-12 shadow-lg border border-white/20 text-center">
-            <div className="text-6xl mb-4">🛒</div>
-            <h3 className="text-xl font-semibold text-slate-900 mb-2">No orders yet</h3>
-            <p className="text-slate-600 mb-6">Start shopping to see your orders here</p>
-            <button
-              onClick={() => navigate('/dashboard')}
-              className="px-6 py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-medium hover:from-orange-600 hover:to-red-600 transition-all duration-200 shadow-md hover:shadow-lg"
-            >
-              Start Shopping
-            </button>
+          <div className="rounded-2xl p-10 text-center flex flex-col items-center"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+            <div className="w-16 h-16 rounded-full flex items-center justify-center mb-4"
+              style={{ background: 'var(--pastel-peach)' }}>
+              <ShoppingBag className="h-8 w-8" style={{ color: 'var(--brand)' }} />
+            </div>
+            <h3 className="text-lg font-bold mb-1.5" style={{ color: 'var(--text-primary)' }}>No orders yet</h3>
+            <p className="text-sm font-medium mb-5" style={{ color: 'var(--text-muted)' }}>Start shopping to see your orders here</p>
+            <button onClick={() => navigate('/dashboard')} className="btn-primary px-6">Start Shopping</button>
           </div>
         ) : (
-          <div className="space-y-6">
-            {orders.map((order) => (
-              <div key={order.id} className="bg-white/80 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-white/20 hover:shadow-xl transition-all duration-300">
-                {/* Order Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="bg-gradient-to-r from-orange-500 to-red-500 p-2 rounded-xl">
-                      <Package className="h-5 w-5 text-white" />
+          <div className="space-y-4">
+            {orders.map((order) => {
+              const cfg = STATUS[order.orderStatus] ?? STATUS.Pending;
+              const StatusIcon = cfg.Icon;
+              const stepIdx = STEPS.indexOf(order.orderStatus);
+
+              return (
+                <div key={order.id} className="rounded-2xl overflow-hidden"
+                  style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-4 py-3.5"
+                    style={{ borderBottom: '1px solid var(--border-subtle)' }}>
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: 'var(--pastel-peach)' }}>
+                        <Store className="h-4 w-4" style={{ color: 'var(--brand)' }} />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-[13px] font-extrabold truncate" style={{ color: 'var(--text-primary)' }}>
+                          Order #{order.id.slice(-6).toUpperCase()}
+                        </p>
+                        <p className="text-[11px] font-medium truncate" style={{ color: 'var(--text-muted)' }}>{order.shopName}</p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="font-semibold text-slate-900">Order #{order.id.slice(-6)}</h3>
-                      <p className="text-sm text-slate-600">{order.shopName}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="flex items-center space-x-3">
-                    <span className={`flex items-center space-x-2 px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(order.orderStatus)}`}>
-                      {getStatusIcon(order.orderStatus)}
-                      <span>{order.orderStatus}</span>
+                    <span className="flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1.5 rounded-lg"
+                      style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.color}30` }}>
+                      <StatusIcon className="h-3 w-3" />
+                      {cfg.label}
                     </span>
                   </div>
-                </div>
 
-                {/* Order Details */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {/* Items */}
-                  <div>
-                    <h4 className="font-medium text-slate-900 mb-3">Items Ordered</h4>
-                    <div className="space-y-2">
-                      {order.items.map((item: any, index: number) => (
-                        <div key={index} className="flex items-center justify-between bg-slate-50 rounded-lg p-3">
-                          <div>
-                            <p className="font-medium text-slate-900">{item.name}</p>
-                            <p className="text-sm text-slate-600">Qty: {item.quantity}</p>
-                          </div>
-                          <span className="font-bold text-slate-900">₹{item.price * item.quantity}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Order Info */}
-                  <div>
-                    <h4 className="font-medium text-slate-900 mb-3">Order Information</h4>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-600">Order Time</span>
-                        <span className="font-medium text-slate-900">{formatDate(order.orderTime)}</span>
+                  {/* Progress */}
+                  {stepIdx >= 0 && (
+                    <div className="px-4 pt-3 pb-2">
+                      <div className="flex items-center">
+                        {STEPS.map((step, i) => {
+                          const done = i <= stepIdx;
+                          return (
+                            <React.Fragment key={step}>
+                              <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 text-[8px] font-extrabold transition-colors"
+                                style={{
+                                  background: done ? 'var(--brand)' : 'var(--bg-elevated)',
+                                  color: done ? '#fff' : 'var(--text-muted)',
+                                  border: `1px solid ${done ? 'var(--brand)' : 'var(--border)'}`,
+                                }}>
+                                {i + 1}
+                              </div>
+                              {i < STEPS.length - 1 && (
+                                <div className="flex-1 h-0.5 mx-0.5 transition-colors"
+                                  style={{ background: done ? 'var(--brand)' : 'var(--border)' }} />
+                              )}
+                            </React.Fragment>
+                          );
+                        })}
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-600">Total Amount</span>
-                        <span className="text-xl font-bold text-slate-900">₹{order.totalAmount}</span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-slate-600">Payment</span>
-                        <span className="font-medium text-emerald-600">Cash on Delivery</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Order Actions */}
-                {order.orderStatus === 'Delivered' && (
-                  <div className="mt-6 pt-4 border-t border-slate-200">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-600">Rate your experience</span>
-                      <div className="flex items-center space-x-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <Star key={star} className="h-5 w-5 text-yellow-400 fill-current cursor-pointer hover:scale-110 transition-transform" />
+                      <div className="flex justify-between mt-1.5">
+                        {STEPS.map((step) => (
+                          <span key={step} className="text-[9px] font-semibold text-center" style={{ flex: 1, color: 'var(--text-muted)' }}>{step}</span>
                         ))}
                       </div>
                     </div>
+                  )}
+
+                  {/* Items */}
+                  <div className="px-4 py-3" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                    <div className="space-y-1.5 mb-3">
+                      {(order.items || []).slice(0, 3).map((item: any, i: number) => (
+                        <div key={i} className="flex items-center justify-between text-[13px]">
+                          <span className="font-medium truncate max-w-[60%]" style={{ color: 'var(--text-secondary)' }}>
+                            {item.name} <span style={{ color: 'var(--text-muted)' }}>× {item.quantity}</span>
+                          </span>
+                          <span className="font-bold" style={{ color: 'var(--text-primary)' }}>₹{item.price * item.quantity}</span>
+                        </div>
+                      ))}
+                      {order.items?.length > 3 && (
+                        <p className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
+                          +{order.items.length - 3} more item{order.items.length - 3 !== 1 ? 's' : ''}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex items-center justify-between pt-2.5" style={{ borderTop: '1px solid var(--border-subtle)' }}>
+                      <span className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>{fmt(order.orderTime)}</span>
+                      <span className="text-[15px] font-extrabold" style={{ color: 'var(--text-primary)' }}>₹{order.totalAmount}</span>
+                    </div>
                   </div>
-                )}
-              </div>
-            ))}
+
+                  {/* Rate */}
+                  {order.orderStatus === 'Delivered' && (
+                    <div className="px-4 py-3 flex items-center justify-between"
+                      style={{ borderTop: '1px solid var(--border-subtle)', background: 'var(--pastel-amber)' }}>
+                      <span className="text-[12px] font-bold" style={{ color: 'var(--text-secondary)' }}>Rate your experience</span>
+                      <div className="flex items-center gap-0.5">
+                        {[1,2,3,4,5].map((s) => (
+                          <button key={s} aria-label={`Rate ${s} star`}>
+                            <Star className="h-5 w-5 fill-current text-amber-300 hover:text-amber-400 transition-colors cursor-pointer" />
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

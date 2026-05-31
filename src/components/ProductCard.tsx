@@ -1,5 +1,7 @@
 import React from 'react';
-import { Star, Plus } from 'lucide-react';
+import { Plus, Minus, Star } from 'lucide-react';
+import { useCart } from './CartContext';
+import { fallbackProductImage, resolveProductImage } from '../utils/productImages';
 
 interface ProductCardProps {
   id: string;
@@ -13,98 +15,176 @@ interface ProductCardProps {
   stock?: number;
   shopDistance?: number;
   onAddToCart: (id: string) => void;
+  shopId?: string;
+  shopName?: string;
+  imageUrl?: string;
+  canonicalName?: string;
+  normalizedName?: string;
+  ingredientIds?: string[];
+  aliases?: string[];
+  category?: string;
+  subcategory?: string;
 }
 
-const ProductCard: React.FC<ProductCardProps> = ({
-  id,
-  name,
-  price,
-  originalPrice,
-  image,
-  rating,
-  shop,
-  inStock,
-  stock,
-  shopDistance,
-  onAddToCart
-}) => {
-  const [imageSrc, setImageSrc] = React.useState(image || fallbackProductImage(name));
+const ProductCard: React.FC<ProductCardProps> = (props) => {
+  const {
+    id, name, price, originalPrice, rating, shop,
+    inStock, stock, shopDistance, onAddToCart,
+  } = props;
+  const { cart, updateQuantity, removeFromCart } = useCart();
+  const resolvedImage = React.useMemo(() => resolveProductImage(props), [props]);
+  const [imgSrc, setImgSrc] = React.useState(resolvedImage);
 
-  React.useEffect(() => {
-    setImageSrc(image || fallbackProductImage(name));
-  }, [image, name]);
+  React.useEffect(() => { setImgSrc(resolvedImage); }, [resolvedImage]);
+
+  const cartItem = cart.find((i) => i.id === id);
+  const qty      = cartItem?.quantity ?? 0;
+  const isOut    = !inStock || (stock !== undefined && stock === 0);
+  const discount = originalPrice && originalPrice > price
+    ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
 
   return (
-    <div className="group bg-white/80 dark:bg-white/5 backdrop-blur-md rounded-2xl p-4 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 border border-white/20 dark:border-white/10 aspect-square flex flex-col">
-      <div className="relative mb-4">
+    <div
+      className="group flex flex-col rounded-2xl overflow-hidden transition-all duration-200"
+      style={{
+        background: 'var(--bg-card)',
+        border: '1px solid var(--border)',
+        boxShadow: 'var(--shadow-card)',
+      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-hover)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-brand)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; }}
+    >
+      {/* Image area */}
+      <div className="relative aspect-square flex items-center justify-center p-3 overflow-hidden"
+        style={{ background: 'var(--bg-elevated)' }}>
         <img
-          src={imageSrc}
+          src={imgSrc}
           alt={name}
-          className="w-full h-32 object-cover rounded-xl bg-gradient-to-br from-orange-100 to-red-100"
+          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
-          onError={() => setImageSrc(fallbackProductImage(name))}
+          onError={() => setImgSrc(fallbackProductImage(name))}
         />
-        {(!inStock || (stock !== undefined && stock === 0)) && (
-          <div className="absolute inset-0 bg-black/50 rounded-xl flex items-center justify-center">
-            <span className="text-white font-medium">Out of Stock</span>
+
+        {/* Discount badge */}
+        {discount > 0 && inStock && (
+          <div className="absolute top-2 left-2 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-md leading-none z-10"
+            style={{ background: 'var(--brand)' }}>
+            {discount}% OFF
           </div>
         )}
-        <div className="absolute top-2 right-2 bg-white/90 dark:bg-white/10 backdrop-blur-sm rounded-lg px-2 py-1 flex items-center space-x-1">
-          <Star className="h-3 w-3 text-yellow-500 fill-current" />
-          <span className="text-xs font-medium text-slate-700 dark:text-slate-200">{rating}</span>
-        </div>
-      </div>
-      
-      <div className="space-y-2 flex-1 flex flex-col justify-between">
-        <h3 className="font-semibold text-slate-900 dark:text-white text-sm leading-tight group-hover:text-orange-600 transition-colors line-clamp-2">
-          {name}
-        </h3>
-        <p className="text-xs text-slate-600 dark:text-slate-300 truncate">{shop}</p>
-        
-        {/* Stock and distance info */}
-        <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-2">
-          {stock !== undefined && (
-            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-              stock > 10 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300' :
-              stock > 0 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300' :
-              'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-            }`}>
-              {stock > 0 ? `${stock} in stock` : 'Out of stock'}
+
+        {/* Out of stock overlay */}
+        {isOut && (
+          <div className="absolute inset-0 flex items-center justify-center"
+            style={{ background: 'rgba(var(--bg-card-rgb, 255,255,255),0.82)' }}>
+            <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-sm uppercase tracking-wide"
+              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+              Out of Stock
             </span>
-          )}
+          </div>
+        )}
+
+        {/* Rating chip */}
+        {rating > 0 && (
+          <div className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md shadow-sm"
+            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            <Star className="h-2.5 w-2.5 text-amber-400 fill-current" />
+            <span className="text-[10px] font-bold" style={{ color: 'var(--text-primary)' }}>{rating}</span>
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex flex-col flex-1 p-2.5 pt-2">
+        {/* Shop/distance */}
+        <div className="flex items-center gap-1 mb-1 min-w-0">
           {shopDistance !== undefined && (
-            <span className="text-slate-500 dark:text-slate-400">
+            <span className="flex-none text-[10px] font-semibold px-1.5 py-0.5 rounded leading-none"
+              style={{ background: 'var(--pastel-peach)', color: 'var(--brand)' }}>
               {shopDistance < 1 ? `${Math.round(shopDistance * 1000)}m` : `${shopDistance.toFixed(1)}km`}
             </span>
           )}
+          <span className="text-[10px] font-medium truncate min-w-0" style={{ color: 'var(--text-muted)' }}>{shop}</span>
         </div>
-        
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
-            <span className="text-base font-bold text-slate-900 dark:text-white">₹{price}</span>
-            {originalPrice && (
-              <span className="text-xs text-slate-500 dark:text-slate-400 line-through">₹{originalPrice}</span>
+
+        {/* Name */}
+        <h3 className="font-bold text-[13px] leading-snug line-clamp-2 mb-1.5 flex-1"
+          style={{ color: 'var(--text-primary)' }}>
+          {name}
+        </h3>
+
+        {/* Price + CTA */}
+        <div className="flex items-center justify-between gap-1 mt-auto">
+          <div className="flex flex-col leading-none">
+            {originalPrice && originalPrice > price && (
+              <span className="text-[10px] line-through font-medium mb-0.5" style={{ color: 'var(--text-muted)' }}>
+                ₹{originalPrice}
+              </span>
             )}
+            <span className="text-[15px] font-extrabold" style={{ color: 'var(--text-primary)' }}>₹{price}</span>
           </div>
-          
-          <button
-            onClick={() => onAddToCart(id)}
-            disabled={!inStock || (stock !== undefined && stock === 0)}
-            title={(inStock && (stock === undefined || stock > 0)) ? `Add ${name} to cart` : `${name} is out of stock`}
-            className="bg-gradient-to-r from-orange-500 to-red-500 text-white p-2 rounded-lg hover:from-orange-600 hover:to-red-600 transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed group-hover:scale-110"
-          >
-            <Plus className="h-3 w-3" />
-          </button>
+
+          {qty > 0 ? (
+            <div className="flex items-center rounded-lg overflow-hidden shadow-sm"
+              style={{ background: 'var(--brand)' }}>
+              <button
+                onClick={() => qty <= 1 ? removeFromCart(id) : updateQuantity(id, qty - 1)}
+                className="w-7 h-7 flex items-center justify-center text-white hover:opacity-80 transition-opacity"
+                aria-label="Decrease"
+              >
+                <Minus className="h-3 w-3" />
+              </button>
+              <span className="w-7 text-center text-white font-extrabold text-[13px] select-none">{qty}</span>
+              <button
+                onClick={() => updateQuantity(id, qty + 1)}
+                className="w-7 h-7 flex items-center justify-center text-white hover:opacity-80 transition-opacity"
+                aria-label="Increase"
+              >
+                <Plus className="h-3 w-3" />
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => !isOut && onAddToCart(id)}
+              disabled={isOut}
+              className="flex items-center gap-1 font-bold text-[12px] px-3 py-1.5 rounded-lg transition-all duration-150 shadow-sm"
+              style={isOut ? {
+                background: 'var(--bg-elevated)',
+                border: '1px solid var(--border)',
+                color: 'var(--text-muted)',
+                cursor: 'not-allowed',
+              } : {
+                background: 'var(--pastel-peach)',
+                border: '1px solid var(--border-brand)',
+                color: 'var(--brand)',
+              }}
+              onMouseEnter={(e) => { if (!isOut) { (e.currentTarget as HTMLButtonElement).style.background = 'var(--brand)'; (e.currentTarget as HTMLButtonElement).style.color = '#fff'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--brand)'; } }}
+              onMouseLeave={(e) => { if (!isOut) { (e.currentTarget as HTMLButtonElement).style.background = 'var(--pastel-peach)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--brand)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-brand)'; } }}
+            >
+              <Plus className="h-3 w-3" />
+              ADD
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 };
 
-const fallbackProductImage = (name: string): string => {
-  const label = (name || 'Product').slice(0, 24).replace(/[<>&'"]/g, '');
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="#1f2937"/><rect x="36" y="48" width="328" height="304" rx="30" fill="#f97316" opacity=".92"/><circle cx="200" cy="145" r="54" fill="#fff7ed" opacity=".95"/><path d="M116 270c22-54 54-81 96-81s74 27 96 81" fill="none" stroke="#fff7ed" stroke-width="24" stroke-linecap="round"/><text x="200" y="340" text-anchor="middle" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#fff7ed">${label}</text></svg>`;
-  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
-};
+/** Skeleton card */
+export const ProductCardSkeleton: React.FC = () => (
+  <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+    <div className="aspect-square skeleton" />
+    <div className="p-2.5 flex flex-col gap-2">
+      <div className="h-2.5 skeleton rounded w-2/3" />
+      <div className="h-3 skeleton rounded w-full" />
+      <div className="h-3 skeleton rounded w-4/5" />
+      <div className="flex justify-between items-center mt-1">
+        <div className="h-4 skeleton rounded w-12" />
+        <div className="h-7 skeleton rounded-lg w-16" />
+      </div>
+    </div>
+  </div>
+);
 
 export default ProductCard;

@@ -1,285 +1,261 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
-import { MapPin, Star, Maximize2, Minimize2, ExternalLink, RotateCcw } from 'lucide-react';
+import { MapPin, RotateCcw, Maximize2, Minimize2, Star, Navigation } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from './ThemeContext';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { filterShopsByDistance } from '../utils/geoUtils.ts';
 
+/* ─── Custom SVG Pin Makers ───────────────────────────────────────────────── */
 
-// Fix for default markers in React Leaflet
-delete (L.Icon.Default.prototype as { _getIconUrl?: () => string })._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+const makePin = (bg: string, glyph: string, size = 38) =>
+  L.divIcon({
+    html: `<div style="
+      width:${size}px;height:${size + 10}px;display:flex;flex-direction:column;align-items:center;
+      filter:drop-shadow(0 2px 6px rgba(0,0,0,0.25));
+    ">
+      <div style="
+        width:${size}px;height:${size}px;border-radius:50% 50% 50% 6px;
+        background:${bg};display:flex;align-items:center;justify-content:center;
+        transform:rotate(45deg);border:2.5px solid rgba(255,255,255,0.9);
+      "><div style="transform:rotate(-45deg);line-height:0">${glyph}</div></div>
+      <div style="width:3px;height:6px;background:${bg};border-radius:0 0 2px 2px;margin-top:-2px"></div>
+    </div>`,
+    className: '',
+    iconSize: [size, size + 10],
+    iconAnchor: [size / 2, size + 10],
+    popupAnchor: [0, -(size + 10)],
+  });
 
-// Custom icons
-const shopIcon = new L.Icon({
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+const shopPin = makePin(
+  '#F97316',
+  `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l1-6h16l1 6"/><path d="M3 9a2 2 0 0 0 2 2 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 4 0 2 2 0 0 0 2-2"/><path d="M5 21V11m14 10V11"/><rect x="9" y="14" width="6" height="7" rx="1"/></svg>`,
+);
 
-const userIcon = new L.Icon({
-  iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png',
-  iconRetinaUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41]
-});
+const userPin = makePin(
+  '#6D28D9',
+  `<svg width="14" height="14" viewBox="0 0 24 24" fill="#fff" stroke="none"><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r="9" fill="none" stroke="#fff" stroke-width="3"/></svg>`,
+  34,
+);
 
+/* ─── Tile URLs ───────────────────────────────────────────────────────────── */
+const TILE_LIGHT = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const TILE_DARK  = 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+const TILE_ATTR  = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>';
+
+/* ─── Types ───────────────────────────────────────────────────────────────── */
 interface Shop {
-  id: string;
-  name: string;
-  latitude: number;
-  longitude: number;
-  rating: number;
-  category: string;
-  status: string;
-  locationName: string;
-  address?: string;
-  phone?: string;
-  distance?: number;
-  openingTime?: string;
-  closingTime?: string;
-  deliveryAvailable?: boolean;
-  imageUrl?: string;
-  verified?: boolean;
+  id: string; name: string; latitude: number; longitude: number; rating: number;
+  category: string; status: string; locationName: string; address?: string;
+  phone?: string; distance?: number; deliveryAvailable?: boolean;
 }
-
 interface MapSectionProps {
   shops: Shop[];
   allShops: Shop[];
   userLocation: { lat: number; lng: number };
 }
 
-// Component to handle map events and dynamic shop loading
+/* ─── Map event handler ───────────────────────────────────────────────────── */
 const MapEventHandler: React.FC<{
   allShops: Shop[];
   userLocation: { lat: number; lng: number };
-  onShopsUpdate: (shops: Shop[], totalCount: number) => void;
+  onShopsUpdate: (shops: Shop[], total: number) => void;
 }> = ({ allShops, userLocation, onShopsUpdate }) => {
-  const map = useMapEvents({
-    zoomend: () => {
-      const zoom = map.getZoom();
-      const center = map.getCenter();
-      
-      // Dynamic radius based on zoom level
-      let radius;
-      if (zoom >= 14) {
-        radius = 3; // 3km for close zoom (Salt Lake area)
-      } else if (zoom >= 12) {
-        radius = 8; // 8km for medium zoom
-      } else {
-        radius = 20; // 20km for far zoom (most of Kolkata)
-      }
-      
-      // Filter shops based on current center and radius
-      const visibleShops = filterShopsByDistance(
-        allShops as any[], 
-        { lat: center.lat, lng: center.lng }, 
-        radius
-      );
-      
-      console.log(`🔍 Zoom: ${zoom}, Radius: ${radius}km, Visible shops: ${visibleShops.length}`);
-      onShopsUpdate(visibleShops as any[], allShops.length);
-    },
-    
-    moveend: () => {
-      const zoom = map.getZoom();
-      const center = map.getCenter();
-      
-      // Dynamic radius based on zoom level
-      let radius;
-      if (zoom >= 14) {
-        radius = 3;
-      } else if (zoom >= 12) {
-        radius = 8;
-      } else {
-        radius = 20;
-      }
-      
-      // Filter shops based on current center and radius
-      const visibleShops = filterShopsByDistance(
-        allShops as any[], 
-        { lat: center.lat, lng: center.lng }, 
-        radius
-      );
-      
-      onShopsUpdate(visibleShops as any[], allShops.length);
-    }
+  useMapEvents({
+    zoomend: () => update(),
+    moveend: () => update(),
   });
-  
+  function update() {
+    // We just pass the allShops to parent for count display
+    onShopsUpdate(allShops, allShops.length);
+  }
   return null;
 };
 
+/* ─── Component ───────────────────────────────────────────────────────────── */
 const MapSection: React.FC<MapSectionProps> = ({ shops, allShops, userLocation }) => {
-  const [isExpanded, setIsExpanded] = React.useState(false);
+  const { theme } = useTheme();
+  const [isExpanded, setIsExpanded] = useState(false);
   const [displayedShops, setDisplayedShops] = useState(shops);
   const [totalShopsCount, setTotalShopsCount] = useState(allShops.length);
   const [mapRef, setMapRef] = useState<L.Map | null>(null);
   const navigate = useNavigate();
 
-  console.log(`🗺️ Map: Received ${shops.length} initial shops, ${allShops.length} total shops`);
-  console.log(`📍 User location: ${userLocation.lat}, ${userLocation.lng}`);
-
-  const handleShopsUpdate = useCallback((newShops: Shop[], totalCount: number) => {
+  const handleShopsUpdate = useCallback((newShops: Shop[], total: number) => {
     setDisplayedShops(newShops);
-    setTotalShopsCount(totalCount);
+    setTotalShopsCount(total);
   }, []);
 
-  const handleResetView = () => {
+  const handleReset = () => {
     if (mapRef) {
       mapRef.setView([userLocation.lat, userLocation.lng], 14);
-          // Reset to nearby shops
-    const nearbyShops = filterShopsByDistance(allShops as any[], userLocation, 3);
-    setDisplayedShops(nearbyShops as any);
+      const nearby = filterShopsByDistance(allShops as any[], userLocation, 3);
+      setDisplayedShops(nearby as any);
     }
   };
 
-  const handleViewShop = (shopId: string) => {
-    navigate(`/shop/${shopId}`);
-  };
+  // Tell Leaflet to recalculate container size after expand/collapse transition
+  useEffect(() => {
+    if (!mapRef) return;
+    // Fire immediately for fast feedback, then again after CSS transition ends
+    mapRef.invalidateSize({ animate: false });
+    const t1 = setTimeout(() => mapRef.invalidateSize({ animate: false }), 50);
+    const t2 = setTimeout(() => mapRef.invalidateSize({ animate: false }), 420);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [isExpanded, mapRef]);
+
+  // Pick tile URL based on theme
+  const tileUrl = theme === 'dark' ? TILE_DARK : TILE_LIGHT;
+  const isDark = theme === 'dark';
 
   return (
-    <div className={`bg-white/80 dark:bg-white/5 backdrop-blur-md rounded-2xl p-6 shadow-lg border border-white/20 dark:border-white/10 transition-all duration-500 ${
-      isExpanded ? 'fixed inset-4 z-50 bg-white/95 dark:bg-slate-900' : ''
-    }`}>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center">
-          <MapPin className="h-6 w-6 text-orange-600 mr-2" />
-          Shops Near You ({displayedShops.length})
-        </h2>
-        <div className="flex items-center space-x-4">
-          <div className="flex items-center space-x-2 text-sm text-slate-600 dark:text-slate-300">
-            <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-            <span>You</span>
-            <div className="w-3 h-3 bg-blue-500 rounded-full ml-4"></div>
-            <span>Shops</span>
-            <span className="text-xs text-slate-500 dark:text-slate-400 ml-2">
-              Showing {displayedShops.length} of {totalShopsCount} shops
-            </span>
-          </div>
-          <div className="flex items-center space-x-2">
-            <button
-              onClick={handleResetView}
-              className="flex items-center space-x-2 px-3 py-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-all duration-200 text-sm font-medium shadow-md hover:shadow-lg"
-            >
-              <RotateCcw className="h-4 w-4" />
-              <span>Reset View</span>
-            </button>
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="flex items-center space-x-2 px-3 py-2 bg-orange-500 text-white rounded-xl hover:bg-orange-600 transition-all duration-200 text-sm font-medium shadow-md hover:shadow-lg"
-            >
-              {isExpanded ? (
-                <>
-                  <Minimize2 className="h-4 w-4" />
-                  <span>Minimize</span>
-                </>
-              ) : (
-                <>
-                  <Maximize2 className="h-4 w-4" />
-                  <span>Expand Map</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-      
-      <div className={`rounded-xl overflow-hidden shadow-inner transition-all duration-500 ${
-        isExpanded ? 'h-[calc(100vh-160px)]' : 'h-80'
-      }`}>
-        <MapContainer
-          center={[userLocation.lat, userLocation.lng]}
-          zoom={14}
-          style={{ height: '100%', width: '100%' }}
-          className="rounded-xl"
-          ref={setMapRef}
-        >
-          <TileLayer
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          />
-          
-          {/* Map event handler for dynamic shop loading */}
-          <MapEventHandler 
-            allShops={allShops} 
-            userLocation={userLocation} 
-            onShopsUpdate={handleShopsUpdate} 
-          />
-          
-          {/* User location marker */}
-          <Marker position={[userLocation.lat, userLocation.lng]} icon={userIcon}>
-            <Popup>
-                <div className="text-center p-2">
-                  <div className="font-semibold text-slate-900 dark:text-white">You are here</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-300">Salt Lake City Center</div>
-              </div>
-            </Popup>
-          </Marker>
-          
-          {/* Shop markers */}
-          {displayedShops.map((shop: any) => (
-            <Marker 
-              key={shop.id} 
-              position={[shop.latitude, shop.longitude]} 
-              icon={shopIcon}
-            >
-              <Popup>
-                <div className="p-3 min-w-[220px]">
-                  <div className="font-semibold text-slate-900 dark:text-white mb-1">{shop.name}</div>
-                  <div className="text-sm text-slate-600 dark:text-slate-300 mb-2">{shop.locationName}</div>
-                  {shop.address && (
-                    <div className="text-xs text-slate-500 dark:text-slate-400 mb-2">{shop.address}</div>
-                  )}
-                  <div className="flex items-center space-x-1 mb-2">
-                    <Star className="h-4 w-4 text-yellow-500 fill-current" />
-                    <span className="text-sm font-medium">{shop.rating}</span>
-                  </div>
-                  <div className="text-sm text-slate-600 dark:text-slate-300 mb-2">{shop.category}</div>
-                  <div className="flex items-center justify-between text-sm mb-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      shop.status === 'open'
-                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300' 
-                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
-                    }`}>
-                      {shop.status === 'open' ? 'Open' : 'Closed'}
-                    </span>
-                    {shop.phone && (
-                      <span className="text-xs text-slate-500 dark:text-slate-400">{shop.phone}</span>
-                    )}
-                  </div>
-                  <button 
-                    onClick={() => handleViewShop(shop.id)}
-                    className="w-full mt-3 bg-gradient-to-r from-orange-500 to-red-500 text-white py-2 px-4 rounded-lg text-sm font-medium hover:from-orange-600 hover:to-red-600 transition-all duration-200 flex items-center justify-center space-x-2"
-                  >
-                    <ExternalLink className="h-4 w-4" />
-                    <span>View Shop</span>
-                  </button>
-                </div>
-              </Popup>
-            </Marker>
-          ))}
-        </MapContainer>
-      </div>
-      
+    <>
+      {/* Expanded backdrop */}
       {isExpanded && (
-        <div 
-          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 transition-all duration-500"
+        <div
+          className="fixed inset-0 z-[59]"
+          style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(8px)' }}
           onClick={() => setIsExpanded(false)}
         />
       )}
-    </div>
+
+      <div
+        className={`qc-card overflow-hidden transition-all duration-300 ${
+          isExpanded
+            ? 'fixed top-20 left-4 right-4 bottom-4 z-[95] flex flex-col'
+            : 'relative z-0'
+        }`}
+      >
+        {/* Map header — always visible */}
+        <div
+          className="flex items-center justify-between px-4 py-3 relative z-[2] flex-shrink-0"
+          style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-card)' }}
+        >
+          <div className="flex items-center gap-2.5">
+            <div
+              className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+              style={{ background: 'var(--pastel-sky)' }}
+            >
+              <Navigation className="h-4 w-4" style={{ color: '#3B82F6' }} />
+            </div>
+            <div>
+              <h3 className="text-[14px] font-extrabold" style={{ color: 'var(--text-primary)' }}>
+                Shops Near You
+              </h3>
+              <p className="text-[11px] font-medium" style={{ color: 'var(--text-muted)' }}>
+                {displayedShops.length} of {totalShopsCount} shops visible
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Legend */}
+            <div className="hidden sm:flex items-center gap-3 text-[10px] font-bold mr-2" style={{ color: 'var(--text-muted)' }}>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#6D28D9' }} />
+                You
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: '#F97316' }} />
+                Shops
+              </span>
+            </div>
+
+            <button
+              onClick={handleReset}
+              title="Reset view"
+              className="flex items-center gap-1.5 text-[12px] font-bold px-2.5 py-1.5 rounded-lg transition-all"
+              style={{
+                background: 'var(--pastel-sky)', color: '#3B82F6',
+                border: '1px solid rgba(59,130,246,0.15)',
+              }}
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span className="hidden sm:inline">Reset</span>
+            </button>
+
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              title={isExpanded ? 'Minimize' : 'Expand map'}
+              className="flex items-center gap-1.5 text-[12px] font-bold px-2.5 py-1.5 rounded-lg transition-all"
+              style={{
+                background: 'var(--pastel-peach)', color: 'var(--brand)',
+                border: '1px solid var(--border-brand)',
+              }}
+            >
+              {isExpanded ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+              <span className="hidden sm:inline">{isExpanded ? 'Minimize' : 'Expand'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Map container */}
+        <div className={`relative z-[1] ${isExpanded ? 'flex-1' : 'h-64 sm:h-72'}`}>
+          <MapContainer
+            center={[userLocation.lat, userLocation.lng]}
+            zoom={14}
+            style={{ height: '100%', width: '100%' }}
+            ref={setMapRef}
+            zoomControl={false}
+            className={isDark ? 'map-dark-mode' : ''}
+          >
+            {/* Voyager tile for both modes; CSS filter softens it for dark mode */}
+            <TileLayer key={tileUrl} url={tileUrl} attribution={TILE_ATTR} maxZoom={20} />
+
+            <MapEventHandler allShops={allShops} userLocation={userLocation} onShopsUpdate={handleShopsUpdate} />
+
+            {/* User pin */}
+            <Marker position={[userLocation.lat, userLocation.lng]} icon={userPin}>
+              <Popup>
+                <div className="py-1 px-0.5 min-w-[160px]">
+                  <p className="font-extrabold text-[13px] text-gray-900">📍 You are here</p>
+                  <p className="text-[11px] text-gray-500 mt-0.5">Salt Lake City Center</p>
+                </div>
+              </Popup>
+            </Marker>
+
+            {/* Shop pins */}
+            {displayedShops.map((shop: any) => (
+              <Marker key={shop.id} position={[shop.latitude, shop.longitude]} icon={shopPin}>
+                <Popup>
+                  <div className="py-1.5 min-w-[210px]">
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <p className="font-extrabold text-[13px] text-gray-900 leading-snug">{shop.name}</p>
+                      <span className={`flex-none text-[10px] font-bold px-1.5 py-0.5 rounded-md ${
+                        shop.status === 'open' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+                      }`}>
+                        {shop.status === 'open' ? 'Open' : 'Closed'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-500 mb-1.5">{shop.locationName}</p>
+                    <div className="flex items-center gap-2 mb-2.5">
+                      <span className="flex items-center gap-1 text-[11px] font-semibold text-amber-600">
+                        <Star className="h-3 w-3 fill-current" />{shop.rating}
+                      </span>
+                      <span className="text-gray-300">·</span>
+                      <span className="text-[11px] text-gray-500 font-medium">{shop.category}</span>
+                    </div>
+                    {shop.deliveryAvailable && (
+                      <p className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-md mb-2">
+                        🚀 Delivery Available
+                      </p>
+                    )}
+                    <button
+                      onClick={() => navigate(`/shop/${shop.id}`)}
+                      className="w-full py-2 rounded-lg text-[12px] font-bold text-white transition-all hover:opacity-90"
+                      style={{ background: '#F97316' }}
+                    >
+                      View Shop →
+                    </button>
+                  </div>
+                </Popup>
+              </Marker>
+            ))}
+          </MapContainer>
+        </div>
+      </div>
+    </>
   );
 };
 
