@@ -1,7 +1,6 @@
 import React from 'react';
 import { Plus, Minus, Star } from 'lucide-react';
 import { useCart } from './CartContext';
-import { fallbackProductImage, resolveProductImage } from '../utils/productImages';
 
 interface ProductCardProps {
   id: string;
@@ -26,16 +25,20 @@ interface ProductCardProps {
   subcategory?: string;
 }
 
-const ProductCard: React.FC<ProductCardProps> = (props) => {
-  const {
-    id, name, price, originalPrice, rating, shop,
-    inStock, stock, shopDistance, onAddToCart,
-  } = props;
-  const { cart, updateQuantity, removeFromCart } = useCart();
-  const resolvedImage = React.useMemo(() => resolveProductImage(props), [props]);
-  const [imgSrc, setImgSrc] = React.useState(resolvedImage);
+const fallbackSvg = (name: string) => {
+  const label = (name || 'P').slice(0, 2).toUpperCase().replace(/[<>&'"]/g, '');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200"><rect width="200" height="200" fill="#F5F3EE"/><text x="100" y="120" text-anchor="middle" font-family="system-ui,sans-serif" font-size="56" font-weight="800" fill="#D1CAB8">${label}</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+};
 
-  React.useEffect(() => { setImgSrc(resolvedImage); }, [resolvedImage]);
+const ProductCard: React.FC<ProductCardProps> = ({
+  id, name, price, originalPrice, image, rating, shop,
+  inStock, stock, shopDistance, onAddToCart,
+}) => {
+  const { cart, updateQuantity, removeFromCart } = useCart();
+  const [imgSrc, setImgSrc] = React.useState(image || fallbackSvg(name));
+
+  React.useEffect(() => { setImgSrc(image || fallbackSvg(name)); }, [image, name]);
 
   const cartItem = cart.find((i) => i.id === id);
   const qty      = cartItem?.quantity ?? 0;
@@ -62,7 +65,7 @@ const ProductCard: React.FC<ProductCardProps> = (props) => {
           alt={name}
           className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
-          onError={() => setImgSrc(fallbackProductImage(name))}
+          onError={() => setImgSrc(fallbackSvg(name))}
         />
 
         {/* Discount badge */}

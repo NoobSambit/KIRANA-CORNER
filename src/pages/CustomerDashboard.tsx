@@ -11,7 +11,6 @@ import ProductGrid from '../components/ProductGrid';
 import RecipeAssistant from '../components/RecipeAssistant';
 import { useCart } from '../components/CartContext';
 import { useSearch } from '../components/SearchContext';
-import { resolveProductImage } from '../utils/productImages';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Zap, MapPin, ChevronDown, ChevronUp, ChefHat,
@@ -168,7 +167,7 @@ const CustomerDashboard: React.FC = () => {
               stock: p.stock != null ? Number(p.stock) : undefined,
               shopDistance: p.shopDistance != null ? Number(p.shopDistance) : undefined,
             };
-            normalized.push({ ...product, image: resolveProductImage(product) });
+            normalized.push(product);
             if (normalized.length >= 80) break; // Hard cap
           }
           setProducts(normalized);
@@ -214,7 +213,7 @@ const CustomerDashboard: React.FC = () => {
     const p = allProducts.find((x) => x.id === productId);
     if (p?.inStock) {
       addToCart({
-        id: p.id, name: p.name, price: p.price, image: resolveProductImage(p), quantity: 1,
+        id: p.id, name: p.name, price: p.price, image: p.image, quantity: 1,
         shop: p.shop, shopId: p.shopId, shopName: p.shopName || p.shop,
       });
     }

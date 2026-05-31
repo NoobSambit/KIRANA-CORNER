@@ -8,7 +8,6 @@ import { db } from '../firebase';
 import { getShopById } from '../utils/shopService';
 import { useCart } from '../components/CartContext';
 import { ProductCardSkeleton } from '../components/ProductCard';
-import { fallbackProductImage, resolveProductImage } from '../utils/productImages';
 
 interface Product {
   id: string;
@@ -27,6 +26,12 @@ interface Product {
   shopId: string;
   shopName: string;
 }
+
+const fallbackImg = (name: string) => {
+  const label = (name || 'P').slice(0, 2).toUpperCase().replace(/[<>&'"]/g, '');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="#fafafa"/><circle cx="200" cy="200" r="90" fill="#f1f5f9"/><text x="200" y="225" text-anchor="middle" font-family="system-ui,sans-serif" font-size="68" font-weight="800" fill="#cbd5e1">${label}</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
+};
 
 const ShopProducts: React.FC = () => {
   const { shopId } = useParams<{ shopId: string }>();
@@ -75,7 +80,7 @@ const ShopProducts: React.FC = () => {
       id: product.id,
       name: product.name,
       price: Number(product.price || 0),
-      image: resolveProductImage(product),
+      image: product.image || product.imageUrl || '',
       quantity: 1,
       shopId,
       shopName: shop?.name || '',
@@ -173,7 +178,7 @@ const ShopProducts: React.FC = () => {
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 sm:gap-4">
               {products.map((product) => {
-                const img = resolveProductImage(product);
+                const img = product.image || product.imageUrl;
                 const isOut = !product.inStock;
                 const qty = getCartQty(product.id);
 
@@ -188,7 +193,7 @@ const ShopProducts: React.FC = () => {
                         src={img || fallbackImg(product.name)}
                         alt={product.name}
                         className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
-                        onError={(e) => { (e.target as HTMLImageElement).src = fallbackProductImage(product.name); }}
+                        onError={(e) => { (e.target as HTMLImageElement).src = fallbackImg(product.name); }}
                         loading="lazy"
                       />
                       {isOut && (

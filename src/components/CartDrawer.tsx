@@ -10,7 +10,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { decrementTopLevelProductStock } from '../utils/productService';
-import { fallbackProductImage, resolveProductImage } from '../utils/productImages';
 
 const CartDrawer: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
   const { cart, updateQuantity, removeFromCart, clearCart } = useCart();
@@ -133,12 +132,7 @@ const CartDrawer: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen
                     style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
                     <div className="h-16 w-16 rounded-lg flex items-center justify-center p-1 flex-shrink-0"
                       style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
-                      <img
-                        src={resolveProductImage(item)}
-                        alt={item.name}
-                        className="max-h-full max-w-full object-contain"
-                        onError={(event) => { event.currentTarget.src = fallbackProductImage(item.name); }}
-                      />
+                      <img src={item.image} alt={item.name} className="max-h-full max-w-full object-contain" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-bold text-[13px] leading-snug line-clamp-2" style={{ color: 'var(--text-primary)' }}>{item.name}</p>

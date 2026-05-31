@@ -12,7 +12,6 @@ import {
 } from 'lucide-react';
 import { useCart } from './CartContext';
 import { fetchRecipeCartSuggestions } from '../utils/recipeAssistantClient';
-import { resolveProductImage } from '../utils/productImages';
 import type {
   IngredientSuggestion,
   ProductMatch,
@@ -95,14 +94,13 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ userLocation, radiusK
 
   const addSelectedToCart = () => {
     selectedItems.forEach(({ match, quantity }) => {
-      const image = resolveProductImage(match);
       addToCart({
         id: match.productId,
         productId: match.productId,
         name: match.name,
         price: match.price,
         originalPrice: match.originalPrice,
-        image,
+        image: match.image || fallbackProductImage(match.name),
         quantity,
         shop: match.shopName,
         shopId: match.shopId,
@@ -256,7 +254,7 @@ const RecipeAssistant: React.FC<RecipeAssistantProps> = ({ userLocation, radiusK
                 selectedItems.map(({ match, quantity }) => (
                   <div key={match.productId} className="flex items-center gap-2.5">
                     <img
-                      src={resolveProductImage(match)}
+                      src={match.image || fallbackProductImage(match.name)}
                       alt={match.name}
                       className="h-10 w-10 rounded-lg object-contain flex-shrink-0"
                       style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}
@@ -377,7 +375,7 @@ const IngredientRow: React.FC<IngredientRowProps> = ({ arrayIndex, ingredient, s
                 <div className="h-14 w-14 shrink-0 rounded-lg flex items-center justify-center p-1"
                   style={{ background: 'var(--bg-subtle)', border: '1px solid var(--border)' }}>
                   <img
-                    src={resolveProductImage(match)}
+                    src={match.image || fallbackProductImage(match.name)}
                     alt={match.name}
                     className="max-h-full max-w-full object-contain"
                   />
@@ -497,6 +495,12 @@ function formatDistance(distanceKm: number): string {
 function clampQuantity(value: number, stock: number): number {
   if (!Number.isFinite(value)) return 1;
   return Math.min(Math.max(1, Math.floor(value)), Math.max(1, stock));
+}
+
+function fallbackProductImage(name: string): string {
+  const label = (name || 'P').slice(0, 2).toUpperCase().replace(/[<>&'"]/g, '');
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"><rect width="400" height="400" fill="#fafafa"/><circle cx="200" cy="200" r="90" fill="#f1f5f9"/><text x="200" y="225" text-anchor="middle" font-family="system-ui,sans-serif" font-size="68" font-weight="800" fill="#cbd5e1">${label}</text></svg>`;
+  return `data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}`;
 }
 
 export default RecipeAssistant;
