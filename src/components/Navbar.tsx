@@ -3,9 +3,10 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ShoppingCart, Search, User, Store, Home,
   Package, MapPin, ChevronDown, X, Sun, Moon,
+  HelpCircle,
 } from 'lucide-react';
 import { useCart } from './CartContext';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged } from 'firebase/auth';
 // @ts-expect-error: JS module
 import { auth } from '../firebase';
 // @ts-expect-error: JS module
@@ -13,6 +14,7 @@ import { getUserData } from '../utils/orderUtils';
 import AccountDrawer from './AccountDrawer';
 import { useSearch } from './SearchContext';
 import { useTheme } from './ThemeContext';
+import HowItWorksModal from './HowItWorksModal';
 
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
@@ -23,6 +25,7 @@ const Navbar: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [accountOpen, setAccountOpen] = React.useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = React.useState(false);
+  const [howItWorksOpen, setHowItWorksOpen] = React.useState(false);
   const { searchQuery, setSearchQuery } = useSearch();
 
   React.useEffect(() => {
@@ -46,6 +49,17 @@ const Navbar: React.FC = () => {
   const isCustomer = role === 'customer';
   const isShopOwner = role === 'shopowner';
   const showBottomNav = isLoggedIn && isCustomer;
+
+  const startCustomerFlow = () => {
+    if (isLoggedIn) navigate('/dashboard');
+    else navigate('/signup', { state: { selectedRole: 'customer' } });
+  };
+
+  const startShopkeeperFlow = () => {
+    if (isShopOwner) navigate('/dashboard');
+    else if (isLoggedIn) navigate('/shop/new');
+    else navigate('/signup', { state: { selectedRole: 'shopowner' } });
+  };
 
   return (
     <>
@@ -125,6 +139,25 @@ const Navbar: React.FC = () => {
 
           {/* Right actions */}
           <div className="flex items-center gap-2 flex-shrink-0">
+
+            {/* Landing page explainer */}
+            {isHome && (
+              <button
+                type="button"
+                onClick={() => setHowItWorksOpen(true)}
+                className="group rounded-xl bg-gradient-to-r from-orange-500 via-amber-300 to-emerald-400 p-[1px] shadow-[0_8px_26px_rgba(249,115,22,0.18)] transition-all hover:shadow-[0_10px_34px_rgba(16,185,129,0.18)] tap-transparent"
+                aria-haspopup="dialog"
+                aria-expanded={howItWorksOpen}
+                aria-label="Open how KiranaConnect works"
+                title="How it works"
+              >
+                <span className="flex items-center gap-1.5 rounded-[11px] bg-black/90 px-3 py-2.5 text-[13px] font-bold text-white backdrop-blur-sm transition-colors group-hover:bg-black/80">
+                  <HelpCircle className="h-4 w-4 text-orange-300" />
+                  <span className="hidden sm:inline">How it works</span>
+                  <span className="sm:hidden">How</span>
+                </span>
+              </button>
+            )}
 
             {/* Dark mode toggle — only on non-home pages */}
             {!isHome && (
@@ -256,6 +289,12 @@ const Navbar: React.FC = () => {
         isOpen={accountOpen}
         onClose={() => setAccountOpen(false)}
         role={role as 'customer' | 'shopowner' | null}
+      />
+      <HowItWorksModal
+        isOpen={howItWorksOpen}
+        onClose={() => setHowItWorksOpen(false)}
+        onCustomerStart={startCustomerFlow}
+        onShopkeeperStart={startShopkeeperFlow}
       />
     </>
   );
