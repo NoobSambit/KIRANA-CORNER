@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   ShoppingCart, Search, User, Store, Home,
-  Package, MapPin, ChevronDown, X, Sun, Moon,
+  Package, MapPin, ChevronDown, X, Sun, Moon, Menu,
   HelpCircle,
 } from 'lucide-react';
 import { useCart } from './CartContext';
@@ -16,6 +16,14 @@ import { useSearch } from './SearchContext';
 import { useTheme } from './ThemeContext';
 import HowItWorksModal from './HowItWorksModal';
 
+const landingNavItems = [
+  { label: 'Home', href: '#home' },
+  { label: 'For Customers', href: '#for-customers' },
+  { label: 'For Shop Owners', href: '#for-shop-owners' },
+  { label: 'About Us', href: '#about-us' },
+  { label: 'Resources', href: '#resources' },
+];
+
 const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -25,6 +33,7 @@ const Navbar: React.FC = () => {
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [accountOpen, setAccountOpen] = React.useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = React.useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = React.useState(false);
   const [howItWorksOpen, setHowItWorksOpen] = React.useState(false);
   const { searchQuery, setSearchQuery } = useSearch();
 
@@ -41,6 +50,19 @@ const Navbar: React.FC = () => {
     });
     return () => unsub();
   }, []);
+
+  React.useEffect(() => {
+    setMobileNavOpen(false);
+  }, [location.pathname]);
+
+  React.useEffect(() => {
+    if (!mobileNavOpen) return undefined;
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileNavOpen(false);
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [mobileNavOpen]);
 
   const cartCount = cart.reduce((s, i) => s + i.quantity, 0);
   const isHome = location.pathname === '/';
@@ -65,10 +87,10 @@ const Navbar: React.FC = () => {
     <>
       {/* ── Top Bar ─────────────────────────────────────────────── */}
       <nav
-        className={`fixed top-0 left-0 w-full z-[100] h-16 ${isHome ? '' : 'nav-glass'}`}
-        style={isHome ? { background: 'rgba(0,0,0,0.9)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' } : undefined}
+        className={`fixed left-0 top-0 z-[100] h-16 w-full border-b ${isHome ? 'border-white/10' : 'nav-glass'}`}
+        style={isHome ? { background: 'rgba(10,6,4,0.9)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' } : undefined}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-5 lg:px-8 h-full flex items-center justify-between gap-3">
+        <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
 
           {/* Logo */}
           <button
@@ -79,14 +101,33 @@ const Navbar: React.FC = () => {
             <img
               src="/app%20logo.png"
               alt="KiranaConnect"
-              className="h-7 w-7 object-contain"
+              className="h-8 w-8 object-contain"
               onError={(e) => { e.currentTarget.onerror = null; }}
             />
-            <span className="text-[18px] font-extrabold tracking-tight whitespace-nowrap"
+            <span className="whitespace-nowrap text-[17px] font-extrabold tracking-tight sm:text-[18px]"
               style={{ color: isHome ? '#fff' : 'var(--text-primary)' }}>
               Kirana<span style={{ color: 'var(--brand)' }}>Connect</span>
             </span>
           </button>
+
+          {/* Landing-page links */}
+          {isHome && (
+            <div className="hidden items-center gap-4 lg:flex xl:gap-7" aria-label="Landing page navigation">
+              {landingNavItems.map((item) => {
+                const active = item.href === '#home';
+                return (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    aria-current={active ? 'page' : undefined}
+                    className={`relative whitespace-nowrap py-5 text-[11px] font-bold transition-colors xl:text-[12px] ${active ? 'text-[#ff8a3d]' : 'text-white/75 hover:text-white'} after:absolute after:bottom-2 after:left-1/2 after:h-0.5 after:-translate-x-1/2 after:rounded-full after:bg-[#f46a16] after:transition-all ${active ? 'after:w-5' : 'after:w-0 hover:after:w-5'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb27a] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0604]`}
+                  >
+                    {item.label}
+                  </a>
+                );
+              })}
+            </div>
+          )}
 
           {/* Desktop search */}
           {isCustomer && !isHome && (
@@ -138,24 +179,33 @@ const Navbar: React.FC = () => {
           )}
 
           {/* Right actions */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="flex flex-shrink-0 items-center gap-2">
 
             {/* Landing page explainer */}
             {isHome && (
               <button
                 type="button"
                 onClick={() => setHowItWorksOpen(true)}
-                className="group rounded-xl bg-gradient-to-r from-orange-500 via-amber-300 to-emerald-400 p-[1px] shadow-[0_8px_26px_rgba(249,115,22,0.18)] transition-all hover:shadow-[0_10px_34px_rgba(16,185,129,0.18)] tap-transparent"
+                className="group hidden min-h-10 items-center gap-1.5 rounded-xl border border-white/20 bg-white/[0.06] px-3 text-[12px] font-bold text-white transition-colors hover:border-white/40 hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb27a] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0604] sm:inline-flex"
                 aria-haspopup="dialog"
                 aria-expanded={howItWorksOpen}
                 aria-label="Open how KiranaConnect works"
                 title="How it works"
               >
-                <span className="flex items-center gap-1.5 rounded-[11px] bg-black/90 px-3 py-2.5 text-[13px] font-bold text-white backdrop-blur-sm transition-colors group-hover:bg-black/80">
-                  <HelpCircle className="h-4 w-4 text-orange-300" />
-                  <span className="hidden sm:inline">How it works</span>
-                  <span className="sm:hidden">How</span>
-                </span>
+                <HelpCircle className="h-4 w-4 text-orange-300" aria-hidden="true" />
+                <span>How it works</span>
+              </button>
+            )}
+
+            {isHome && (
+              <button
+                type="button"
+                onClick={() => setMobileNavOpen((open) => !open)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/20 bg-white/[0.06] text-white transition-colors hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb27a] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0604] lg:hidden"
+                aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
+                aria-expanded={mobileNavOpen}
+              >
+                {mobileNavOpen ? <X className="h-5 w-5" aria-hidden="true" /> : <Menu className="h-5 w-5" aria-hidden="true" />}
               </button>
             )}
 
@@ -231,14 +281,40 @@ const Navbar: React.FC = () => {
             ) : (
               <button
                 onClick={() => navigate('/login')}
-                className="px-4 py-2.5 rounded-xl font-bold text-[13px] text-white transition-all"
-                style={{ background: 'var(--brand)', boxShadow: 'var(--shadow-brand)' }}
+                className="min-h-10 rounded-xl border border-[#f46a16]/70 bg-[#f46a16] px-3.5 text-[12px] font-extrabold text-white shadow-[0_6px_16px_rgba(244,106,22,0.2)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#ff7b2f] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb27a] focus-visible:ring-offset-2 focus-visible:ring-offset-[#0a0604] sm:px-4 sm:text-[13px]"
               >
-                Sign In
+                <span className="sm:hidden">Login</span>
+                <span className="hidden sm:inline">{isHome ? 'Login / Sign Up' : 'Sign In'}</span>
               </button>
             )}
           </div>
         </div>
+
+        {/* Landing-page mobile menu */}
+        {isHome && mobileNavOpen && (
+          <div className="absolute left-0 right-0 top-16 border-b border-white/10 bg-[#120b07]/[0.98] px-4 py-3 shadow-2xl lg:hidden">
+            <div className="mx-auto max-w-[1440px] space-y-1">
+              {landingNavItems.map((item) => (
+                <a
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileNavOpen(false)}
+                  className={`flex min-h-11 items-center rounded-lg px-3 text-sm font-bold transition-colors ${item.href === '#home' ? 'bg-[#f46a16]/10 text-[#ff9a57]' : 'text-white/80 hover:bg-white/[0.06] hover:text-white'} focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb27a]`}
+                >
+                  {item.label}
+                </a>
+              ))}
+              <button
+                type="button"
+                onClick={() => { setMobileNavOpen(false); setHowItWorksOpen(true); }}
+                className="flex min-h-11 w-full items-center gap-2 rounded-lg px-3 text-left text-sm font-bold text-white/80 transition-colors hover:bg-white/[0.06] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb27a]"
+              >
+                <HelpCircle className="h-4 w-4 text-orange-300" aria-hidden="true" />
+                How it works
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Mobile search dropdown */}
         {mobileSearchOpen && isCustomer && (

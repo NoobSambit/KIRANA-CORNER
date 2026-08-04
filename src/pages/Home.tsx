@@ -1,10 +1,9 @@
 import React from 'react';
-import { motion, useScroll, useTransform } from 'framer-motion';
-import StatsCard from '../components/StatsCard';
+import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { 
-  ShoppingBag, Store, Users, Truck, Shield, Star, MapPin, 
-  ArrowRight, CheckCircle, Heart, Mail, Phone, Search,
+  ShoppingBag, Store, Truck, Shield, Star, MapPin,
+  ArrowRight, Heart,
   Facebook, Twitter, Instagram, Linkedin, Youtube,
   Building2, TrendingDown, Frown, ShoppingCart, LineChart, User, Package, ClipboardList, Bell
 } from 'lucide-react';
@@ -15,6 +14,7 @@ import { auth } from '../firebase';
 import { getShopByOwnerId } from '../utils/shopService';
 import SignupModal from '../components/SignupModal';
 import LoginModal from '../components/LoginModal';
+import HeroPhoneMockup from '../components/HeroPhoneMockup';
 
 const Home: React.FC = () => {
   const navigate = useNavigate();
@@ -24,10 +24,6 @@ const Home: React.FC = () => {
   const [signupOpen, setSignupOpen] = React.useState<boolean>(false);
   const [loginOpen, setLoginOpen] = React.useState<boolean>(false);
   
-  // Parallax scroll effects
-  const { scrollY } = useScroll();
-  const heroParallax = useTransform(scrollY, [0, 500], [0, -80]);
-
   React.useEffect(() => {
     const unsub = onAuthStateChanged(auth, async (user) => {
       setIsAuthed(!!user);
@@ -101,251 +97,103 @@ const Home: React.FC = () => {
   return (
     <div className="min-h-screen bg-[#111] text-white overflow-x-hidden font-sans">
       {/* 1. Hero Section */}
-      <section className="relative h-screen min-h-screen flex flex-col justify-center overflow-hidden py-12 md:py-20">
+      <section id="home" className="hero-section relative flex flex-col justify-center overflow-hidden py-10 sm:py-12 lg:py-8">
         {/* Background Image Container */}
         <div className="absolute inset-0 z-0">
           <img 
             src="/hero%20image%20kirana.png" 
-            alt="Traditional Indian Shopkeeper Store" 
-            className="w-full h-full object-cover object-center" 
+            alt="Kirana shopkeeper standing in a neighborhood grocery store"
+            className="h-full w-full object-cover object-center"
           />
-          {/* Dark overlay so white text is readable over the image */}
+          {/* Keep the original visual treatment so the shopkeeper and warm orange sweep remain visible. */}
           <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/20" />
           {/* Bottom fade to blend into dark bg below */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-[#111]" />
+          <div className="absolute bottom-0 left-0 right-0 h-28 bg-gradient-to-b from-transparent to-[#111]" />
         </div>
 
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center max-w-7xl mx-auto w-full">
+        <div className="relative z-10 mx-auto w-full max-w-[1440px] px-5 sm:px-8 lg:px-10">
+          <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(280px,360px)] lg:gap-10 xl:gap-16">
             {/* Left Content (Text & Call-To-Action) */}
-            <div className="lg:col-span-7 space-y-6 text-center lg:text-left">
+            <div className="max-w-[760px] space-y-6 text-center lg:-translate-y-16 lg:text-left">
 
               <motion.h1
-                initial={{ opacity: 0, y: 30 }}
+                initial={false}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.1 }}
-                className="text-4xl sm:text-5xl md:text-6xl xl:text-[4.5rem] font-extrabold leading-[1.1] text-white tracking-tight"
+                className="max-w-[21ch] text-[clamp(2.55rem,4.25vw,4.65rem)] font-extrabold leading-[1.02] tracking-[-0.045em] text-white [text-wrap:balance] drop-shadow-[0_3px_18px_rgba(0,0,0,0.24)]"
               >
-                Your Neighborhood <br />
-                Store. <span className="text-[#ff6a00]">Now Online.</span>
+                Your Neighborhood Store. <span className="text-[#ff6a00]">Now Online.</span>
               </motion.h1>
 
               <motion.p
-                initial={{ opacity: 0, y: 20 }}
+                initial={false}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.2 }}
-                className="text-white/80 text-base sm:text-lg max-w-xl mx-auto lg:mx-0 leading-relaxed font-medium"
+                className="mx-auto max-w-[610px] text-[clamp(1rem,1.45vw,1.2rem)] font-medium leading-[1.65] text-[#f2e9df]/90 lg:mx-0"
               >
-                Empowering local kirana shops to compete in the age of quick commerce. Place orders with the neighborhood stores you trust.
+                Empowering local kirana shops to compete in the age of quick commerce. Order from neighborhood stores you already trust.
               </motion.p>
 
               {/* Action Buttons */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                initial={false}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6, delay: 0.3 }}
-                className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start pt-2"
+                className="flex flex-col justify-center gap-3 pt-1 sm:flex-row lg:justify-start"
               >
-                <motion.button
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
+                <button
                   onClick={() => goSignup('customer')}
-                  className="px-8 py-3.5 bg-orange-500 text-white font-bold rounded-[14px] shadow-[0_4px_14px_rgba(255,106,0,0.3)] hover:shadow-[0_6px_20px_rgba(255,106,0,0.4)] transition-all duration-300 flex items-center justify-center gap-2 text-base"
+                  className="inline-flex min-h-14 items-center justify-center gap-2 rounded-[14px] bg-[#f46a16] px-7 text-base font-extrabold text-white shadow-[0_10px_28px_rgba(244,106,22,0.28)] transition duration-200 hover:-translate-y-0.5 hover:bg-[#ff7b2f] hover:shadow-[0_14px_32px_rgba(244,106,22,0.36)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ffb27a] focus-visible:ring-offset-2 focus-visible:ring-offset-[#1b1009] active:translate-y-0"
                 >
                   Shop Nearby
-                  <ArrowRight className="h-5 w-5" />
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05, y: -2 }}
-                  whileTap={{ scale: 0.95 }}
+                  <ArrowRight className="h-5 w-5" aria-hidden="true" />
+                </button>
+                <button
                   onClick={handlePrimaryCTA}
-                  className="px-8 py-3.5 bg-white/10 border border-white/30 text-white font-bold rounded-[14px] hover:bg-white/20 hover:border-white/50 backdrop-blur-sm shadow-sm transition-all duration-300 flex items-center justify-center gap-2 text-base"
+                  className="inline-flex min-h-14 items-center justify-center rounded-[14px] border border-white/45 bg-black/25 px-7 text-base font-extrabold text-white shadow-[0_8px_22px_rgba(0,0,0,0.14)] backdrop-blur-sm transition duration-200 hover:-translate-y-0.5 hover:border-white/75 hover:bg-black/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#1b1009] active:translate-y-0"
                 >
-                  Register Your Shop
-                </motion.button>
+                  List Your Store
+                </button>
               </motion.div>
 
               {/* Trust badges */}
               <motion.div
-                initial={{ opacity: 0 }}
+                initial={false}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 0.6, delay: 0.4 }}
-                className="pt-10 flex flex-wrap justify-center lg:justify-start gap-8 lg:gap-12 text-sm sm:text-base text-white/90 font-semibold"
+                className="grid grid-cols-3 gap-3 pt-5 text-left text-[11px] font-bold text-white/90 sm:gap-5 sm:text-sm lg:max-w-[700px] lg:gap-7"
               >
-                <div className="flex items-center gap-4 group cursor-default">
-                  <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3 group-hover:bg-white/20">
-                    <Store className="w-7 h-7 text-orange-400" />
+                <div className="group flex flex-col items-center gap-2 text-center sm:flex-row sm:items-center sm:gap-3 sm:text-left">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-orange-300/35 bg-orange-300/10 text-orange-300 transition duration-200 group-hover:bg-orange-300/20 sm:h-12 sm:w-12">
+                    <Store className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
                   </div>
-                  <span className="leading-tight group-hover:text-white transition-colors duration-300">Local Stores<br/>You Trust</span>
+                  <span className="leading-[1.25]">Trusted local stores</span>
                 </div>
 
-                <div className="flex items-center gap-4 group cursor-default">
-                  <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3 group-hover:bg-white/20">
-                    <Truck className="w-7 h-7 text-emerald-400" />
+                <div className="group flex flex-col items-center gap-2 text-center sm:flex-row sm:items-center sm:gap-3 sm:text-left">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-emerald-300/35 bg-emerald-300/10 text-emerald-300 transition duration-200 group-hover:bg-emerald-300/20 sm:h-12 sm:w-12">
+                    <Truck className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
                   </div>
-                  <span className="leading-tight group-hover:text-white transition-colors duration-300">Fast & Easy<br/>Delivery</span>
+                  <span className="leading-[1.25]">Fast doorstep delivery</span>
                 </div>
 
-                <div className="flex items-center gap-4 group cursor-default">
-                  <div className="w-14 h-14 rounded-2xl bg-white/10 border border-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 transition-transform duration-500 group-hover:scale-110 group-hover:-rotate-3 group-hover:bg-white/20">
-                    <Shield className="w-7 h-7 text-cyan-400" />
+                <div className="group flex flex-col items-center gap-2 text-center sm:flex-row sm:items-center sm:gap-3 sm:text-left">
+                  <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] border border-sky-300/35 bg-sky-300/10 text-sky-300 transition duration-200 group-hover:bg-sky-300/20 sm:h-12 sm:w-12">
+                    <Shield className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
                   </div>
-                  <span className="leading-tight group-hover:text-white transition-colors duration-300">Secure & Safe<br/>Payments</span>
+                  <span className="leading-[1.25]">Secure payments</span>
                 </div>
               </motion.div>
             </div>
 
             {/* Right Content (Floating Smartphone Mockup) */}
-            <div className="lg:col-span-5 relative flex justify-center lg:justify-end">
+            <div className="relative flex justify-center lg:justify-end lg:translate-y-5">
               <motion.div
-                initial={{ opacity: 0, y: 50, scale: 0.95 }}
+                initial={false}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
-                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
-                className="relative w-[300px] sm:w-[340px] aspect-[9/19.5] bg-[#E8E8E8] rounded-[50px] p-[8px] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] flex flex-col overflow-hidden border-[4px] border-[#333]"
+                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
               >
-                <div className="absolute inset-0 rounded-[42px] border-[1px] border-black pointer-events-none z-30" />
-                
-                {/* Smartphone Screen Content */}
-                <div className="w-full h-full bg-[#FAFAFA] rounded-[38px] overflow-hidden flex flex-col relative text-[10px] select-none font-sans text-slate-800 shadow-inner">
-                  
-                  {/* Smartphone Notch Area */}
-                  <div className="absolute top-0 left-1/2 -translate-x-1/2 w-36 h-7 bg-black rounded-b-[18px] z-20 flex items-center justify-center">
-                    <div className="w-12 h-1.5 bg-[#222] rounded-full mb-0.5" />
-                  </div>
-
-                  {/* Status Bar */}
-                  <div className="pt-8 px-5 pb-2 flex justify-between items-center text-[11px] text-black font-semibold">
-                    <span>9:41</span>
-                    <div className="flex items-center gap-1.5">
-                      <div className="flex space-x-[2px] items-end h-2.5">
-                        <div className="w-[3px] h-1.5 bg-black rounded-sm" />
-                        <div className="w-[3px] h-2 bg-black rounded-sm" />
-                        <div className="w-[3px] h-2.5 bg-black rounded-sm" />
-                      </div>
-                      <div className="w-4 h-2.5 rounded-sm border border-black p-[1px] relative">
-                        <div className="w-full h-full bg-black rounded-[1px]" />
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Location Header & Cart */}
-                  <div className="px-4 pb-3">
-                    <div className="flex items-center justify-between text-[11px] mb-2.5">
-                      <div className="flex items-center gap-1 text-slate-700">
-                        <MapPin className="h-3.5 w-3.5 text-[#ff6a00]" />
-                        <span className="font-semibold tracking-tight">Koramangala, Bengaluru</span>
-                        <span className="text-[8px] opacity-70">▼</span>
-                      </div>
-                      <div className="relative flex items-center justify-center text-slate-600 bg-white p-1.5 rounded-full shadow-sm border border-slate-100">
-                        <ShoppingBag className="h-4 w-4" />
-                        <span className="absolute -top-1 -right-1 bg-[#ff6a00] text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full border-[1.5px] border-white">
-                          0
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Search Bar */}
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                      <div className="w-full bg-white border border-slate-200 text-slate-400 py-2.5 pl-9 pr-4 rounded-xl text-[10px] shadow-sm font-medium">
-                        Search for products...
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Miniature App Cards List (Scrollable) */}
-                  <div className="flex-1 overflow-y-auto px-4 py-1 space-y-5 scrollbar-none pb-6">
-                    {/* Hero Card Banner */}
-                    <div className="relative bg-[#FFF0E6] rounded-2xl p-4 text-slate-800 overflow-hidden shadow-sm">
-                      <div className="relative z-10 max-w-[65%] space-y-2">
-                        <p className="font-bold text-[14px] leading-tight text-[#333]">Shop from trusted <br/>local stores <br/>near you</p>
-                        <span className="inline-block bg-[#ff6a00] text-white font-bold px-3 py-1.5 rounded-lg text-[9px] shadow-sm">
-                          Shop Now
-                        </span>
-                      </div>
-                      <div className="absolute right-[-10px] bottom-0 w-24 h-24 pointer-events-none">
-                        <img src="/hero%20image%20kirana.png" className="w-full h-full object-cover rounded-tl-full opacity-90 shadow-md" alt="shop illust" />
-                      </div>
-                    </div>
-                    
-                    {/* Top Categories */}
-                    <div>
-                      <div className="flex justify-between items-center text-[11px] mb-3 font-bold text-[#333]">
-                        <span>Top Categories</span>
-                        <span className="text-[#ff6a00] font-semibold text-[9px]">View All</span>
-                      </div>
-                      <div className="flex justify-between text-center font-semibold">
-                        {[
-                          { label: 'Grocery', emoji: '🛍️', bg: 'bg-[#E8F5E9]' },
-                          { label: 'Dairy', emoji: '🥛', bg: 'bg-[#E3F2FD]' },
-                          { label: 'Snacks', emoji: '🍿', bg: 'bg-[#FFF3E0]' },
-                          { label: 'Beverages', emoji: '🥤', bg: 'bg-[#FCE4EC]' },
-                          { label: 'Personal\nCare', emoji: '🧴', bg: 'bg-[#F3E5F5]' }
-                        ].map((cat, idx) => (
-                          <div key={idx} className="flex flex-col items-center gap-1.5 w-[50px]">
-                            <div className={`w-10 h-10 ${cat.bg} rounded-xl flex flex-col items-center justify-center shadow-sm`}>
-                              <span className="text-lg">{cat.emoji}</span>
-                            </div>
-                            <span className="text-[7.5px] text-slate-600 leading-tight whitespace-pre-line">{cat.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                    
-                    {/* Nearby Stores Card */}
-                    <div>
-                      <div className="flex justify-between items-center text-[11px] mb-3 font-bold text-[#333]">
-                        <span>Nearby Stores</span>
-                        <span className="text-green-600 font-semibold text-[9px]">View Map</span>
-                      </div>
-                      
-                      {/* Mini Map */}
-                      <div className="w-full h-20 bg-[#F0F0F0] rounded-xl mb-3 relative overflow-hidden border border-slate-200">
-                        <div className="absolute inset-0 opacity-30 bg-[radial-gradient(#999_1px,transparent_1px)] [background-size:10px_10px]" />
-                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex flex-col items-center">
-                          <MapPin className="h-6 w-6 text-[#ff6a00] drop-shadow-md relative z-10" />
-                          <div className="w-4 h-1 bg-black/20 blur-sm rounded-[100%] mt-[-4px]" />
-                        </div>
-                      </div>
-                      
-                      {/* Store Card Details */}
-                      <div className="bg-white p-3 rounded-2xl border border-slate-100 flex gap-3 shadow-[0_4px_12px_rgba(0,0,0,0.03)]">
-                        <div className="w-12 h-12 rounded-xl overflow-hidden shadow-sm flex-shrink-0 relative">
-                           <img src="/hero%20image%20kirana.png" className="w-full h-full object-cover object-left" alt="shop" />
-                        </div>
-                        <div className="min-w-0 flex-1 flex flex-col justify-center">
-                          <div className="flex justify-between items-start mb-0.5">
-                            <span className="font-bold text-[#333] truncate text-[11px]">Sharma Provision Store</span>
-                            <span className="bg-[#E8F5E9] text-green-700 text-[8px] font-bold px-1.5 py-0.5 rounded shadow-sm">20% OFF</span>
-                          </div>
-                          <div className="flex items-center gap-1.5 text-slate-500 text-[9px] font-medium mb-1">
-                            <span className="flex items-center gap-0.5 text-[#ff6a00]"><Star className="w-2.5 h-2.5 fill-current" /> 4.8</span>
-                            <span>•</span>
-                            <span>10 mins delivery</span>
-                            <span>•</span>
-                            <span>0.8 km</span>
-                          </div>
-                          <div className="text-slate-400 text-[9px] font-medium">₹249 min order</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Miniature Bottom Tab Bar */}
-                  <div className="h-[60px] bg-white border-t border-slate-100 px-6 flex justify-between items-center text-slate-400 text-[9px] font-semibold pb-2">
-                    {[
-                      { label: 'Home', icon: <span className="text-[#ff6a00] text-lg">🏠</span>, active: true },
-                      { label: 'Categories', icon: <span className="text-lg opacity-80 grayscale">🗂️</span> },
-                      { label: 'Orders', icon: <span className="text-lg opacity-80 grayscale">📦</span> },
-                      { label: 'Profile', icon: <span className="text-lg opacity-80 grayscale">👤</span> }
-                    ].map((item, idx) => (
-                      <div key={idx} className={`flex flex-col items-center gap-1 cursor-pointer ${item.active ? 'text-[#ff6a00]' : ''}`}>
-                        {item.icon}
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                <HeroPhoneMockup />
               </motion.div>
             </div>
           </div>
@@ -353,7 +201,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* 2. What's Happening to Our Local Stores? (VS Section) */}
-      <section className="py-6 relative overflow-hidden bg-[#111]">
+      <section id="about-us" className="py-6 relative overflow-hidden bg-[#111]">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 relative z-10 flex justify-center">
           <div className="flex flex-col lg:flex-row w-full rounded-[24px] overflow-hidden border border-white/10 bg-[#1a1a1f] shadow-xl items-stretch">
             {/* Left Column (Details) */}
@@ -423,7 +271,7 @@ const Home: React.FC = () => {
       </section>
 
       {/* === UNIFIED PREMIUM MID SECTION === */}
-      <section className="relative min-h-screen flex flex-col justify-center py-20 overflow-hidden">
+      <section id="resources" className="relative min-h-screen flex flex-col justify-center py-20 overflow-hidden">
         {/* Background image */}
         <div className="absolute inset-0 z-0">
           <img src="/mid_section.png" alt="" className="w-full h-full object-cover" />
@@ -500,7 +348,7 @@ const Home: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-12 relative">
               
               {/* For Customers */}
-              <div className="flex flex-col w-full">
+              <div id="for-customers" className="flex flex-col w-full scroll-mt-20">
                 <div className="flex items-center justify-center gap-3 mb-12">
                   <User className="text-orange-500 w-7 h-7" />
                   <h4 className="text-2xl font-extrabold text-white">For Customers</h4>
@@ -533,7 +381,7 @@ const Home: React.FC = () => {
               <div className="hidden lg:block absolute left-1/2 top-[10%] bottom-[10%] w-[1px] bg-white/10 -translate-x-1/2" />
 
               {/* For Shop Owners */}
-              <div className="flex flex-col w-full">
+              <div id="for-shop-owners" className="flex flex-col w-full scroll-mt-20">
                 <div className="flex items-center justify-center gap-3 mb-12">
                   <Store className="text-emerald-500 w-7 h-7" />
                   <h4 className="text-2xl font-extrabold text-white">For Shop Owners</h4>
