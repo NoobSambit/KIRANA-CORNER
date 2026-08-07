@@ -7,7 +7,7 @@ interface Product {
   rating: number; shop: string; inStock: boolean; category: string;
   stock?: number; shopDistance?: number; shopId?: string; shopName?: string;
   imageUrl?: string; canonicalName?: string; normalizedName?: string; subcategory?: string;
-  ingredientIds?: string[]; aliases?: string[];
+  ingredientIds?: string[]; aliases?: string[]; shopImage?: string;
 }
 
 interface ProductGridProps {

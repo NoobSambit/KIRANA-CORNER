@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Minus, Star } from 'lucide-react';
+import { Heart, Minus, Plus, Star } from 'lucide-react';
 import { useCart } from './CartContext';
 
 interface ProductCardProps {
@@ -23,6 +23,7 @@ interface ProductCardProps {
   aliases?: string[];
   category?: string;
   subcategory?: string;
+  shopImage?: string;
 }
 
 const fallbackSvg = (name: string) => {
@@ -32,115 +33,108 @@ const fallbackSvg = (name: string) => {
 };
 
 const ProductCard: React.FC<ProductCardProps> = ({
-  id, name, price, originalPrice, image, rating, shop,
-  inStock, stock, shopDistance, onAddToCart,
+  id,
+  name,
+  price,
+  originalPrice,
+  image,
+  rating,
+  shop,
+  inStock,
+  stock,
+  shopDistance,
+  onAddToCart,
 }) => {
   const { cart, updateQuantity, removeFromCart } = useCart();
   const [imgSrc, setImgSrc] = React.useState(image || fallbackSvg(name));
 
-  React.useEffect(() => { setImgSrc(image || fallbackSvg(name)); }, [image, name]);
+  React.useEffect(() => {
+    setImgSrc(image || fallbackSvg(name));
+  }, [image, name]);
 
-  const cartItem = cart.find((i) => i.id === id);
-  const qty      = cartItem?.quantity ?? 0;
-  const isOut    = !inStock || (stock !== undefined && stock === 0);
+  const cartItem = cart.find((item) => item.id === id);
+  const qty = cartItem?.quantity ?? 0;
+  const isOut = !inStock || (stock !== undefined && stock === 0);
   const discount = originalPrice && originalPrice > price
-    ? Math.round(((originalPrice - price) / originalPrice) * 100) : 0;
+    ? Math.round(((originalPrice - price) / originalPrice) * 100)
+    : 0;
+  const distanceLabel = shopDistance === undefined
+    ? null
+    : shopDistance < 1
+      ? `${Math.round(shopDistance * 1000)} m away`
+      : `${shopDistance.toFixed(1)} km away`;
 
   return (
-    <div
-      className="group flex flex-col rounded-2xl overflow-hidden transition-all duration-200"
-      style={{
-        background: 'var(--bg-card)',
-        border: '1px solid var(--border)',
-        boxShadow: 'var(--shadow-card)',
-      }}
-      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-hover)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border-brand)'; }}
-      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.boxShadow = 'var(--shadow-card)'; (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; }}
-    >
-      {/* Image area */}
-      <div className="relative aspect-square flex items-center justify-center p-3 overflow-hidden"
-        style={{ background: 'var(--bg-elevated)' }}>
+    <article className="marketplace-product-card group flex min-w-0 flex-col overflow-hidden rounded-[16px]">
+      <div className="marketplace-product-image relative flex aspect-[1.42/1] items-center justify-center overflow-hidden p-3">
         <img
           src={imgSrc}
           alt={name}
-          className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+          className="h-full w-full object-contain transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
           onError={() => setImgSrc(fallbackSvg(name))}
         />
 
-        {/* Discount badge */}
         {discount > 0 && inStock && (
-          <div className="absolute top-2 left-2 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded-md leading-none z-10"
-            style={{ background: 'var(--brand)' }}>
+          <div className="absolute left-2 top-2 z-10 rounded-md bg-[#fff6ee] px-2 py-1 text-[10px] font-extrabold leading-none text-[#d7601b]">
             {discount}% OFF
           </div>
         )}
 
-        {/* Out of stock overlay */}
-        {isOut && (
-          <div className="absolute inset-0 flex items-center justify-center"
-            style={{ background: 'rgba(var(--bg-card-rgb, 255,255,255),0.82)' }}>
-            <span className="text-[11px] font-bold px-2.5 py-1 rounded-lg shadow-sm uppercase tracking-wide"
-              style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-              Out of Stock
-            </span>
-          </div>
-        )}
+        <button
+          type="button"
+          aria-label={`Save ${name}`}
+          className="absolute right-2 top-2 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-[#d8d5d0] bg-white/90 text-[#4d4b49] transition hover:border-[#e4742b] hover:text-[#e4742b]"
+        >
+          <Heart className="h-4 w-4" />
+        </button>
 
-        {/* Rating chip */}
-        {rating > 0 && (
-          <div className="absolute bottom-1.5 right-1.5 flex items-center gap-0.5 px-1.5 py-0.5 rounded-md shadow-sm"
-            style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-            <Star className="h-2.5 w-2.5 text-amber-400 fill-current" />
-            <span className="text-[10px] font-bold" style={{ color: 'var(--text-primary)' }}>{rating}</span>
+        {isOut && (
+          <div className="absolute inset-0 flex items-center justify-center bg-white/75">
+            <span className="rounded-lg border border-[#d8d5d0] bg-white px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-[#716d69] shadow-sm">
+              Out of stock
+            </span>
           </div>
         )}
       </div>
 
-      {/* Content */}
-      <div className="flex flex-col flex-1 p-2.5 pt-2">
-        {/* Shop/distance */}
-        <div className="flex items-center gap-1 mb-1 min-w-0">
-          {shopDistance !== undefined && (
-            <span className="flex-none text-[10px] font-semibold px-1.5 py-0.5 rounded leading-none"
-              style={{ background: 'var(--pastel-peach)', color: 'var(--brand)' }}>
-              {shopDistance < 1 ? `${Math.round(shopDistance * 1000)}m` : `${shopDistance.toFixed(1)}km`}
-            </span>
-          )}
-          <span className="text-[10px] font-medium truncate min-w-0" style={{ color: 'var(--text-muted)' }}>{shop}</span>
+      <div className="flex flex-1 flex-col p-3">
+        <div className="mb-1 flex items-center gap-1 text-[11px] font-medium text-[#8c9998]">
+          <Star className="h-3 w-3 fill-[#f7a51c] text-[#f7a51c]" />
+          <span className="font-bold text-[#f7b33d]">{rating > 0 ? rating.toFixed(1) : '—'}</span>
+          <span className="text-[#53605f]">·</span>
+          <span className="truncate">{shop}</span>
         </div>
 
-        {/* Name */}
-        <h3 className="font-bold text-[13px] leading-snug line-clamp-2 mb-1.5 flex-1"
-          style={{ color: 'var(--text-primary)' }}>
+        <h3 className="mb-2 line-clamp-2 flex-1 text-[13px] font-semibold leading-snug text-[#e9eeed]">
           {name}
         </h3>
 
-        {/* Price + CTA */}
-        <div className="flex items-center justify-between gap-1 mt-auto">
+        <div className="mb-3 flex items-center gap-1 text-[10px] font-medium text-[#6f7d7c]">
+          {distanceLabel || 'Nearby store'}
+        </div>
+
+        <div className="mt-auto flex items-center justify-between gap-2">
           <div className="flex flex-col leading-none">
             {originalPrice && originalPrice > price && (
-              <span className="text-[10px] line-through font-medium mb-0.5" style={{ color: 'var(--text-muted)' }}>
-                ₹{originalPrice}
-              </span>
+              <span className="mb-1 text-[10px] font-medium text-[#667271] line-through">₹{originalPrice}</span>
             )}
-            <span className="text-[15px] font-extrabold" style={{ color: 'var(--text-primary)' }}>₹{price}</span>
+            <span className="text-[15px] font-extrabold text-[#f3f6f5]">₹{price}</span>
           </div>
 
           {qty > 0 ? (
-            <div className="flex items-center rounded-lg overflow-hidden shadow-sm"
-              style={{ background: 'var(--brand)' }}>
+            <div className="flex items-center overflow-hidden rounded-lg bg-[#ff7718] shadow-sm">
               <button
-                onClick={() => qty <= 1 ? removeFromCart(id) : updateQuantity(id, qty - 1)}
-                className="w-7 h-7 flex items-center justify-center text-white hover:opacity-80 transition-opacity"
+                onClick={() => (qty <= 1 ? removeFromCart(id) : updateQuantity(id, qty - 1))}
+                className="flex h-7 w-7 items-center justify-center text-white transition-opacity hover:opacity-80"
                 aria-label="Decrease"
               >
                 <Minus className="h-3 w-3" />
               </button>
-              <span className="w-7 text-center text-white font-extrabold text-[13px] select-none">{qty}</span>
+              <span className="w-7 select-none text-center text-[13px] font-extrabold text-white">{qty}</span>
               <button
                 onClick={() => updateQuantity(id, qty + 1)}
-                className="w-7 h-7 flex items-center justify-center text-white hover:opacity-80 transition-opacity"
+                className="flex h-7 w-7 items-center justify-center text-white transition-opacity hover:opacity-80"
                 aria-label="Increase"
               >
                 <Plus className="h-3 w-3" />
@@ -150,41 +144,31 @@ const ProductCard: React.FC<ProductCardProps> = ({
             <button
               onClick={() => !isOut && onAddToCart(id)}
               disabled={isOut}
-              className="flex items-center gap-1 font-bold text-[12px] px-3 py-1.5 rounded-lg transition-all duration-150 shadow-sm"
-              style={isOut ? {
-                background: 'var(--bg-elevated)',
-                border: '1px solid var(--border)',
-                color: 'var(--text-muted)',
-                cursor: 'not-allowed',
-              } : {
-                background: 'var(--pastel-peach)',
-                border: '1px solid var(--border-brand)',
-                color: 'var(--brand)',
-              }}
-              onMouseEnter={(e) => { if (!isOut) { (e.currentTarget as HTMLButtonElement).style.background = 'var(--brand)'; (e.currentTarget as HTMLButtonElement).style.color = '#fff'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--brand)'; } }}
-              onMouseLeave={(e) => { if (!isOut) { (e.currentTarget as HTMLButtonElement).style.background = 'var(--pastel-peach)'; (e.currentTarget as HTMLButtonElement).style.color = 'var(--brand)'; (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border-brand)'; } }}
+              className="flex items-center gap-1 rounded-lg border px-3 py-1.5 text-[12px] font-bold transition-all duration-150"
+              style={isOut
+                ? { background: 'var(--bg-elevated)', borderColor: 'var(--border)', color: 'var(--text-muted)', cursor: 'not-allowed' }
+                : { background: 'transparent', borderColor: 'rgba(255,119,24,0.72)', color: '#ff8b32' }}
             >
               <Plus className="h-3 w-3" />
-              ADD
+              Add
             </button>
           )}
         </div>
       </div>
-    </div>
+    </article>
   );
 };
 
-/** Skeleton card */
 export const ProductCardSkeleton: React.FC = () => (
-  <div className="rounded-2xl overflow-hidden" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
-    <div className="aspect-square skeleton" />
-    <div className="p-2.5 flex flex-col gap-2">
-      <div className="h-2.5 skeleton rounded w-2/3" />
-      <div className="h-3 skeleton rounded w-full" />
-      <div className="h-3 skeleton rounded w-4/5" />
-      <div className="flex justify-between items-center mt-1">
-        <div className="h-4 skeleton rounded w-12" />
-        <div className="h-7 skeleton rounded-lg w-16" />
+  <div className="marketplace-product-card overflow-hidden rounded-[16px]">
+    <div className="aspect-[1.42/1] skeleton" />
+    <div className="flex flex-col gap-2 p-3">
+      <div className="h-2.5 w-2/3 rounded skeleton" />
+      <div className="h-3 w-full rounded skeleton" />
+      <div className="h-3 w-4/5 rounded skeleton" />
+      <div className="mt-1 flex items-center justify-between">
+        <div className="h-4 w-12 rounded skeleton" />
+        <div className="h-7 w-16 rounded-lg skeleton" />
       </div>
     </div>
   </div>
