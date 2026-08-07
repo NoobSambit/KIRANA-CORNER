@@ -69,6 +69,7 @@ const Navbar: React.FC = () => {
   const isDashboard = location.pathname === '/dashboard';
   const isOrders = location.pathname === '/orders';
   const isCustomer = role === 'customer';
+  const isCustomerSurface = isCustomer && !isHome;
   const isShopOwner = role === 'shopowner';
   const showBottomNav = isLoggedIn && isCustomer;
 
@@ -88,7 +89,7 @@ const Navbar: React.FC = () => {
       {/* ── Top Bar ─────────────────────────────────────────────── */}
       <nav
         className={`fixed left-0 top-0 z-[100] h-16 w-full border-b ${isHome ? 'border-white/10' : 'nav-glass'}`}
-        style={isHome ? { background: 'rgba(10,6,4,0.9)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' } : undefined}
+        style={isHome ? { background: 'rgba(10,6,4,0.9)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' } : isCustomerSurface ? { background: 'rgba(7,16,18,0.95)', borderColor: 'rgba(39,51,54,0.92)' } : undefined}
       >
         <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
 
@@ -130,19 +131,19 @@ const Navbar: React.FC = () => {
           )}
 
           {/* Desktop search */}
-          {isCustomer && !isHome && (
-            <div className="hidden md:flex flex-1 max-w-lg items-center relative">
+          {isCustomerSurface && (
+            <div className="relative hidden max-w-[660px] flex-1 items-center md:flex">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 pointer-events-none"
                 style={{ color: 'var(--text-muted)' }} />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search products, shops…"
-                className="w-full pl-10 pr-10 py-2.5 rounded-xl text-[14px] font-medium outline-none transition-all"
+                placeholder="Search products, stores or brands"
+                className="w-full rounded-[14px] border py-2.5 pl-10 pr-14 text-[14px] font-medium outline-none transition-all"
                 style={{
-                  background: 'var(--bg-elevated)',
-                  border: '1px solid var(--border)',
+                  background: 'rgba(17,26,28,0.88)',
+                  border: '1px solid #2d3b3e',
                   color: 'var(--text-primary)',
                 }}
                 onFocus={(e) => {
@@ -166,14 +167,14 @@ const Navbar: React.FC = () => {
 
           {/* Location chip — desktop customer only */}
           {isCustomer && !isHome && (
-            <button className="hidden lg:flex items-center gap-1.5 px-3 py-2 rounded-xl text-[13px] font-semibold transition-all flex-shrink-0 tap-transparent"
+            <button className="hidden flex-shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-[13px] font-semibold transition-all tap-transparent lg:flex"
               style={{
                 background: 'var(--bg-elevated)',
                 border: '1px solid var(--border)',
                 color: 'var(--text-secondary)',
               }}>
               <MapPin className="h-3.5 w-3.5" style={{ color: 'var(--brand)' }} />
-              <span>Nearby</span>
+              <span>Salt Lake, Kolkata</span>
               <ChevronDown className="h-3 w-3" style={{ color: 'var(--text-muted)' }} />
             </button>
           )}
@@ -244,7 +245,7 @@ const Navbar: React.FC = () => {
             {isCustomer && !isHome && (
               <button
                 onClick={openCartDrawer}
-                className="relative flex items-center gap-1.5 px-3.5 py-2.5 rounded-xl font-bold text-[13px] text-white transition-all tap-transparent"
+                className="relative flex items-center gap-1.5 rounded-[12px] px-3.5 py-2.5 text-[13px] font-bold text-white transition-all tap-transparent"
                 style={{ background: 'var(--brand)', boxShadow: 'var(--shadow-brand)' }}
                 aria-label={`Open cart (${cartCount} items)`}
               >
