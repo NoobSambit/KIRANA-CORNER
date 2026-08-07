@@ -482,3 +482,139 @@ html.dark {
 .nav-glass, .qc-card, .btn-ghost, .input-base, main, aside, section {
   transition: background-color 0.3s ease, border-color 0.3s ease, color 0.25s ease, box-shadow 0.3s ease;
 }
+
+/* The marketplace uses explicit dark art direction, but every surface remains
+   usable when the shared theme toggle is switched to light mode. */
+.marketplace-light {
+  --market-light-bg: #f4f7f6;
+  --market-light-panel: #ffffff;
+  --market-light-panel-soft: #f8faf9;
+  --market-light-border: #d9e2df;
+  --market-light-text: #1d2c2a;
+  --market-light-copy: #667572;
+  background: var(--market-light-bg);
+  color: var(--market-light-text);
+}
+
+.marketplace-light .marketplace-panel,
+.marketplace-light .marketplace-muted-panel,
+.marketplace-light .marketplace-product-card {
+  background: var(--market-light-panel);
+  border-color: var(--market-light-border);
+  box-shadow: 0 8px 24px rgba(38, 56, 51, 0.06);
+}
+
+.marketplace-light .marketplace-product-card:hover {
+  border-color: #ec7a28;
+  box-shadow: 0 12px 28px rgba(38, 56, 51, 0.1), 0 0 0 1px rgba(236, 122, 40, 0.1);
+}
+
+.marketplace-light .marketplace-product-image {
+  background: #f5f6f2;
+  border-color: #e6ebe8;
+}
+
+.marketplace-light .marketplace-map {
+  border-color: var(--market-light-border);
+  background: var(--market-light-panel);
+}
+
+.marketplace-light .marketplace-map [class*="bg-[#0c"],
+.marketplace-light .marketplace-map [class*="bg-[#0d"],
+.marketplace-light .marketplace-map [class*="bg-[#11"],
+.marketplace-light .marketplace-map [class*="bg-[#111"],
+.marketplace-light .marketplace-map [class*="bg-[#17"] {
+  background: rgba(255, 255, 255, 0.94) !important;
+}
+
+.marketplace-light .marketplace-map [class*="border-[#2"],
+.marketplace-light .marketplace-map [class*="border-[#3"],
+.marketplace-light .marketplace-map [class*="border-[#4"],
+.marketplace-light .marketplace-map [class*="border-[#7"] {
+  border-color: #d7e1de !important;
+}
+
+.marketplace-light .marketplace-map [class*="text-[#f1"],
+.marketplace-light .marketplace-map [class*="text-[#e"],
+.marketplace-light .marketplace-map [class*="text-[#c"],
+.marketplace-light .marketplace-map [class*="text-[#a"],
+.marketplace-light .marketplace-map [class*="text-[#8"] {
+  color: var(--market-light-text) !important;
+}
+
+.marketplace-light .marketplace-map [class*="text-[#ff"],
+.marketplace-light .marketplace-map [class*="text-[#d7"] {
+  color: #dc681c !important;
+}
+
+.marketplace-light .marketplace-product-card [class*="text-[#e9"],
+.marketplace-light .marketplace-product-card [class*="text-[#f3f6"],
+.marketplace-light .marketplace-product-card [class*="text-[#f3f5"],
+.marketplace-light .marketplace-product-card [class*="text-[#8"],
+.marketplace-light .marketplace-product-card [class*="text-[#6"],
+.marketplace-light .marketplace-product-card [class*="text-[#5"] {
+  color: var(--market-light-copy) !important;
+}
+
+.marketplace-light .marketplace-product-card h3 {
+  color: var(--market-light-text) !important;
+}
+
+.marketplace-light .marketplace-product-card [class*="text-[#f7"],
+.marketplace-light .marketplace-product-card [class*="text-[#ff8"] {
+  color: #c76a1b !important;
+}
+
+.marketplace-light .marketplace-product-card [class*="bg-[#ff7718"] {
+  background: var(--brand) !important;
+  color: #fff !important;
+}
+
+.marketplace-light [class*="text-[#f3f5"],
+.marketplace-light [class*="text-[#f1f5"],
+.marketplace-light [class*="text-[#f2f3"],
+.marketplace-light [class*="text-[#f0f4"],
+.marketplace-light [class*="text-[#e8"],
+.marketplace-light [class*="text-[#e3"],
+.marketplace-light [class*="text-[#edf"] {
+  color: var(--market-light-text) !important;
+}
+
+.marketplace-light [class*="text-[#8"],
+.marketplace-light [class*="text-[#9"],
+.marketplace-light [class*="text-[#a"],
+.marketplace-light [class*="text-[#7"] {
+  color: var(--market-light-copy) !important;
+}
+
+.marketplace-light [class*="bg-[#11"],
+.marketplace-light [class*="bg-[#12"],
+.marketplace-light [class*="bg-[#14"],
+.marketplace-light [class*="bg-[#17"],
+.marketplace-light [class*="bg-[#1a"],
+.marketplace-light [class*="bg-[#2a"],
+.marketplace-light [class*="bg-[#2b"],
+.marketplace-light [class*="bg-[#22"] {
+  background: var(--market-light-panel-soft) !important;
+}
+
+.marketplace-light [class*="border-[#2"],
+.marketplace-light [class*="border-[#3"],
+.marketplace-light [class*="border-[#4"],
+.marketplace-light [class*="border-[#5"],
+.marketplace-light [class*="border-[#7"],
+.marketplace-light [class*="border-[#a"] {
+  border-color: var(--market-light-border) !important;
+}
+
+.marketplace-light select,
+.marketplace-light input {
+  background: var(--market-light-panel);
+  border-color: var(--market-light-border);
+  color: var(--market-light-text);
+}
+
+.marketplace-light [class*="bg-[linear-gradient"] {
+  background: linear-gradient(100deg, #fff8ef, #ffffff 60%) !important;
+  border-color: #f0c39b !important;
+}

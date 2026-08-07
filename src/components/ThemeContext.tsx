@@ -5,6 +5,7 @@ type Theme = 'light' | 'dark';
 interface ThemeContextValue {
   theme: Theme;
   toggleTheme: () => void;
+  setTheme: (theme: Theme) => void;
   isDark: boolean;
 }
 
@@ -29,7 +30,7 @@ function applyThemeToDOM(theme: Theme) {
 }
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [theme, setThemeState] = useState<Theme>(getInitialTheme);
 
   // useLayoutEffect so the class is applied before paint
   useLayoutEffect(() => {
@@ -45,7 +46,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, []);
 
   const toggleTheme = useCallback(() => {
-    setTheme((prev) => {
+    setThemeState((prev) => {
       const next = prev === 'light' ? 'dark' : 'light';
       // Apply immediately so there's no flash
       applyThemeToDOM(next);
@@ -53,9 +54,14 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     });
   }, []);
 
+  const setTheme = useCallback((nextTheme: Theme) => {
+    applyThemeToDOM(nextTheme);
+    setThemeState(nextTheme);
+  }, []);
+
   const value = React.useMemo(
-    () => ({ theme, toggleTheme, isDark: theme === 'dark' }),
-    [theme, toggleTheme],
+    () => ({ theme, toggleTheme, setTheme, isDark: theme === 'dark' }),
+    [theme, toggleTheme, setTheme],
   );
 
   return (

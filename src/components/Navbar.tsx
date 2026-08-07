@@ -89,7 +89,7 @@ const Navbar: React.FC = () => {
       {/* ── Top Bar ─────────────────────────────────────────────── */}
       <nav
         className={`fixed left-0 top-0 z-[100] h-16 w-full border-b ${isHome ? 'border-white/10' : 'nav-glass'}`}
-        style={isHome ? { background: 'rgba(10,6,4,0.9)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' } : isCustomerSurface ? { background: 'rgba(7,16,18,0.95)', borderColor: 'rgba(39,51,54,0.92)' } : undefined}
+        style={isHome ? { background: 'rgba(10,6,4,0.9)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' } : isCustomerSurface ? { background: 'var(--nav-bg)', borderColor: 'var(--nav-border)' } : undefined}
       >
         <div className="mx-auto flex h-full max-w-[1440px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
 
@@ -142,8 +142,8 @@ const Navbar: React.FC = () => {
                 placeholder="Search products, stores or brands"
                 className="w-full rounded-[14px] border py-2.5 pl-10 pr-14 text-[14px] font-medium outline-none transition-all"
                 style={{
-                  background: 'rgba(17,26,28,0.88)',
-                  border: '1px solid #2d3b3e',
+                  background: 'var(--bg-elevated)',
+                  border: '1px solid var(--border)',
                   color: 'var(--text-primary)',
                 }}
                 onFocus={(e) => {

@@ -107,7 +107,7 @@ const MapSection: React.FC<MapSectionProps> = ({ shops, allShops, userLocation }
             <div className="pointer-events-auto rounded-[12px] border border-[#304144] bg-[#0c1416]/90 px-4 py-3 shadow-lg backdrop-blur-md">
               <div className="flex items-start gap-2.5">
                 <div className="mt-0.5 flex h-7 w-7 items-center justify-center rounded-full bg-[#172b2c] text-[#54c7a3]"><Navigation className="h-3.5 w-3.5" /></div>
-                <div><h2 className="text-[16px] font-bold text-[#f1f5f4]">Shops near you</h2><p className="mt-0.5 text-[11px] text-[#8e9b9a]">{displayedShops.length} stores within your map area</p><button type="button" onClick={() => navigate('/shop')} className="mt-2 text-[11px] font-bold text-[#ff8525]">View all stores <ChevronRightIcon /></button></div>
+                <div><h2 className="text-[16px] font-bold text-[#f1f5f4]">Shops near you</h2><p className="mt-0.5 text-[11px] text-[#8e9b9a]">{displayedShops.length} stores within your map area</p><button type="button" onClick={() => document.getElementById('nearby-stores')?.scrollIntoView({ behavior: 'smooth' })} className="mt-2 text-[11px] font-bold text-[#ff8525]">View all stores <ChevronRightIcon /></button></div>
               </div>
             </div>
             <div className="pointer-events-auto flex items-center gap-1 rounded-[9px] border border-[#3a494b] bg-[#0d1719]/90 px-3 py-2 text-[12px] font-semibold text-[#c2ccca] backdrop-blur-md"><span>Within 3 km</span><ChevronDown className="h-3.5 w-3.5 text-[#899594]" /></div>

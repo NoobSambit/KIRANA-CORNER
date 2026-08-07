@@ -30,6 +30,7 @@ import ProductGrid from '../components/ProductGrid';
 import RecipeAssistant from '../components/RecipeAssistant';
 import { useCart } from '../components/CartContext';
 import { useSearch } from '../components/SearchContext';
+import { useTheme } from '../components/ThemeContext';
 
 const STORE_THUMBNAIL = '/images/stores/kirana-storefront.png';
 const DEFAULT_LOCATION = { lat: 22.5893, lng: 88.4096 };
@@ -105,6 +106,7 @@ const safeImage = (value: unknown) => (typeof value === 'string' ? value.trim() 
 const CustomerDashboard: React.FC = () => {
   const { searchQuery } = useSearch();
   const { cart, addToCart } = useCart();
+  const { isDark, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -121,18 +123,13 @@ const CustomerDashboard: React.FC = () => {
 
   const userLocation = useMemo(() => DEFAULT_LOCATION, []);
 
-  // The customer surface is intentionally dark like the approved marketplace direction.
-  // Home owns its own light treatment and restores the saved preference when leaving it.
   useEffect(() => {
-    document.documentElement.classList.add('dark');
-    return () => {
-      try {
-        if (localStorage.getItem('kirana-theme') !== 'dark') document.documentElement.classList.remove('dark');
-      } catch {
-        // Ignore storage failures; the next route can apply its own theme.
-      }
-    };
-  }, []);
+    try {
+      if (localStorage.getItem('kirana-theme') !== 'light') setTheme('dark');
+    } catch {
+      setTheme('dark');
+    }
+  }, [setTheme]);
 
   useEffect(() => {
     const category = new URLSearchParams(location.search).get('category');
@@ -300,7 +297,7 @@ const CustomerDashboard: React.FC = () => {
   const cartTotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
   return (
-    <div className="marketplace-surface min-h-screen pb-24 text-[var(--text-primary)]">
+    <div className={`marketplace-surface ${isDark ? 'marketplace-dark' : 'marketplace-light'} min-h-screen pb-24 text-[var(--text-primary)]`}>
       <div className="mx-auto w-full max-w-[1440px] space-y-5 px-4 py-6 sm:px-6 lg:px-8">
         <motion.section
           initial={{ opacity: 0, y: 10 }}
@@ -430,7 +427,7 @@ const CustomerDashboard: React.FC = () => {
           </div>
         </section>
 
-        <section>
+        <section id="catalog">
           {shopsLoading ? (
             <div className="marketplace-panel flex h-[310px] items-center justify-center rounded-[18px] text-[13px] text-[#8d9998]">Locating shops near you…</div>
           ) : (
@@ -445,7 +442,7 @@ const CustomerDashboard: React.FC = () => {
               <p className="mt-1 text-[12px] text-[#82908f]">Available right now from neighbourhood stores around you</p>
               <p className="mt-2 text-[12px] text-[#82908f]">Based on <span className="font-semibold text-[#ff8624]">Salt Lake, Kolkata</span> · within {DELIVERY_RADIUS_KM} km</p>
             </div>
-            <button type="button" onClick={() => navigate('/shop')} className="hidden items-center gap-1 text-[12px] font-bold text-[#ff8624] sm:flex">View all <ChevronRight className="h-4 w-4" /></button>
+            <button type="button" onClick={() => document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth' })} className="hidden items-center gap-1 text-[12px] font-bold text-[#ff8624] sm:flex">View all <ChevronRight className="h-4 w-4" /></button>
           </div>
           {shopLoadError && <p className="mb-3 text-[12px] text-[#e68b72]">{shopLoadError}</p>}
           <ProductGrid products={visibleProducts} viewMode={viewMode} onAddToCart={handleAddToCart} loading={productsLoading} />
@@ -455,7 +452,7 @@ const CustomerDashboard: React.FC = () => {
         </section>
 
         {featuredStores.length > 0 && (
-          <section>
+          <section id="nearby-stores">
             <div className="mb-3">
               <h2 className="marketplace-section-title">Popular from nearby stores</h2>
               <p className="mt-1 text-[12px] text-[#82908f]">Top rated neighbourhood stores loved by customers like you</p>
