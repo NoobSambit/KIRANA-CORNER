@@ -65,31 +65,31 @@
    DARK MODE TOKENS
 ═══════════════════════════════════════════════════ */
 html.dark {
-  --bg-base:       #111113;
-  --bg-card:       #1C1C1F;
-  --bg-elevated:   #252528;
-  --bg-subtle:     #2E2E32;
+  --bg-base:       #071012;
+  --bg-card:       #101719;
+  --bg-elevated:   #151f21;
+  --bg-subtle:     #1b282a;
 
-  --brand:         #FB923C;
-  --brand-light:   #3C1F08;
-  --brand-dark:    #FDBA74;
+  --brand:         #ff7718;
+  --brand-light:   #3c210d;
+  --brand-dark:    #ff9c4b;
 
-  --pastel-peach:  #2D1F10;
-  --pastel-mint:   #0F2A1D;
-  --pastel-sky:    #101E30;
-  --pastel-rose:   #2D1218;
-  --pastel-violet: #1E1030;
-  --pastel-amber:  #2A2008;
-  --pastel-teal:   #0F2825;
+  --pastel-peach:  #2c1c10;
+  --pastel-mint:   #0d2d20;
+  --pastel-sky:    #102430;
+  --pastel-rose:   #2d1518;
+  --pastel-violet: #221837;
+  --pastel-amber:  #30240b;
+  --pastel-teal:   #0e2c2a;
 
-  --text-primary:  #EDEDEC;
-  --text-secondary:#A1A09E;
-  --text-muted:    #6B6A68;
+  --text-primary:  #f2f4f3;
+  --text-secondary:#a3aeae;
+  --text-muted:    #6d7a7a;
   --text-inverse:  #111113;
 
-  --border:        #303033;
-  --border-subtle: #252528;
-  --border-brand:  #5C2D0F;
+  --border:        #273336;
+  --border-subtle: #1c2729;
+  --border-brand:  #754116;
 
   --success:       #34D399;
   --success-bg:    #0F2A1D;
@@ -98,12 +98,12 @@ html.dark {
   --error:         #F87171;
   --error-bg:      #2D1218;
 
-  --shadow-card:   0 1px 3px rgba(0,0,0,0.25), 0 1px 8px rgba(0,0,0,0.15);
-  --shadow-hover:  0 4px 20px rgba(0,0,0,0.35);
-  --shadow-brand:  0 4px 14px rgba(251,146,60,0.25);
+  --shadow-card:   0 1px 2px rgba(0,0,0,0.32), 0 8px 20px rgba(0,0,0,0.14);
+  --shadow-hover:  0 12px 28px rgba(0,0,0,0.28);
+  --shadow-brand:  0 6px 20px rgba(255,119,24,0.25);
 
-  --nav-bg:        rgba(17,17,19,0.95);
-  --nav-border:    rgba(48,48,51,0.9);
+  --nav-bg:        rgba(7,16,18,0.92);
+  --nav-border:    rgba(39,51,54,0.92);
 
   --map-tile-url:  'dark';
 }
@@ -236,7 +236,7 @@ html.dark {
   .hero-phone-scroll::-webkit-scrollbar { display: none; }
 
   /* Navbar glass */
-  .nav-glass {
+.nav-glass {
     background: var(--nav-bg);
     border-bottom: 1px solid var(--nav-border);
     backdrop-filter: blur(20px) saturate(1.4);
@@ -317,6 +317,98 @@ html.dark {
   /* Badge helpers */
   .badge-open   { background: var(--success-bg); color: var(--success); border: 1px solid var(--success); font-size: 0.6875rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
   .badge-closed { background: var(--error-bg); color: var(--error); border: 1px solid var(--error); font-size: 0.6875rem; font-weight: 700; padding: 2px 8px; border-radius: 6px; }
+}
+
+/* Customer marketplace surface — intentionally denser and more cinematic than
+   the public landing page, matching the map-first shopping workflow. */
+.marketplace-surface {
+  background:
+    radial-gradient(circle at 82% 7%, rgba(255, 119, 24, 0.055), transparent 24rem),
+    var(--bg-base);
+}
+
+.marketplace-panel {
+  background: linear-gradient(180deg, rgba(18, 27, 29, 0.96), rgba(11, 18, 20, 0.98));
+  border: 1px solid rgba(54, 69, 71, 0.66);
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.12);
+}
+
+.marketplace-muted-panel {
+  background: rgba(16, 24, 26, 0.74);
+  border: 1px solid rgba(54, 69, 71, 0.58);
+}
+
+.marketplace-section-title {
+  color: var(--text-primary);
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(1.2rem, 1.7vw, 1.55rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.marketplace-kicker {
+  color: #ff861f;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.marketplace-map .leaflet-container {
+  min-height: 250px;
+  background: #101d29;
+}
+
+.marketplace-map .leaflet-control-zoom {
+  margin: 16px !important;
+  border: 1px solid rgba(204, 226, 232, 0.18) !important;
+  border-radius: 10px !important;
+  overflow: hidden;
+}
+
+.marketplace-map .leaflet-control-zoom a {
+  width: 34px !important;
+  height: 34px !important;
+  line-height: 32px !important;
+  background: rgba(12, 22, 25, 0.88) !important;
+  color: #dfe9e8 !important;
+  border-color: rgba(204, 226, 232, 0.14) !important;
+}
+
+.marketplace-map .leaflet-control-attribution {
+  background: rgba(8, 14, 16, 0.7) !important;
+  color: rgba(237, 245, 243, 0.58) !important;
+}
+
+.marketplace-map .leaflet-control-attribution a {
+  color: #ff9a4c !important;
+}
+
+.marketplace-product-image {
+  background: #f7f5f0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.marketplace-product-card {
+  background: linear-gradient(180deg, rgba(18, 27, 29, 0.98), rgba(11, 18, 20, 0.98));
+  border: 1px solid rgba(52, 67, 69, 0.76);
+  transition: border-color 180ms ease, transform 180ms ease, box-shadow 180ms ease;
+}
+
+.marketplace-product-card:hover {
+  border-color: rgba(255, 119, 24, 0.72);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 119, 24, 0.1);
+  transform: translateY(-2px);
+}
+
+.marketplace-scroll-rail {
+  scrollbar-width: none;
+}
+
+.marketplace-scroll-rail::-webkit-scrollbar { display: none; }
+
+@media (max-width: 767px) {
+  .marketplace-map .leaflet-container { min-height: 300px; }
 }
 
 @media (min-width: 1024px) {
